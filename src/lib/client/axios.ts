@@ -30,11 +30,7 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
   (response) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(response);
-      }, 100); 
-    });
+    return response;
   },
   async (error) => {
     const originalRequest = error.config;
@@ -46,7 +42,7 @@ axiosInstance.interceptors.response.use(
       try {
         const response = await refreshTokenAxiosIntance.post(
           '/app.user-account/auth/token/refresh/',
-          { role: 'RENTER' }
+          { role: 'LESSOR' }
         );
         await setAccessToken(response.data.access);
         originalRequest.headers['Authorization'] = `Bearer ${response.data.access}`;

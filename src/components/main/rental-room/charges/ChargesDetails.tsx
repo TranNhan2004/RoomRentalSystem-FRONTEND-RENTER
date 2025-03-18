@@ -6,25 +6,25 @@ import { Loading } from '@/components/partial/data/Loading';
 import { INITIAL_PROVINCE } from '@/initials/Address.initial';
 import { NOT_FOUND_URL } from '@/lib/client/notFoundURL';
 import { useRouter } from 'next/navigation';
-import { ChargesListType } from '@/types/RentalRoom.type';
-import { chargesListService } from '@/services/RentalRoom.service';
+import { ChargesType } from '@/types/RentalRoom.type';
+import { chargesService } from '@/services/RentalRoom.service';
 import { formatCurrency, formatDate } from '@/lib/client/format';
 
-type ChargesListDetailsProps = {
+type ChargesDetailsProps = {
   roomId: string;
   id: string;
 }
 
-export const ChargesListDetails = (props: ChargesListDetailsProps) => {
+export const ChargesDetails = (props: ChargesDetailsProps) => {
   const router = useRouter();
-  const [data, setData] = useState<ChargesListType>(INITIAL_PROVINCE);
+  const [data, setData] = useState<ChargesType>(INITIAL_PROVINCE);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const data = await chargesListService.get(props.id);
+        const data = await chargesService.get(props.id);
         setData(data);
 
       } catch {
@@ -53,27 +53,27 @@ export const ChargesListDetails = (props: ChargesListDetailsProps) => {
         data={[
           {
             label: 'Giá phòng',
-            value: formatCurrency(data.room_charge ?? -1)
+            value: formatCurrency(data.room_charge)
           },
           {
             label: 'Giá đặt cọc',
-            value: formatCurrency(data.deposit ?? -1)
+            value: formatCurrency(data.deposit)
           },
           {
             label: 'Giá điện',
-            value: formatCurrency(data.electricity_charge ?? -1)
+            value: formatCurrency(data.electricity_charge)
           },
           {
             label: 'Giá nước',
-            value: formatCurrency(data.water_charge ?? -1)
+            value: formatCurrency(data.water_charge)
           },
           {
             label: 'Giá wifi',
-            value: formatCurrency(data.wifi_charge ?? -1)
+            value: data.wifi_charge === -1 ? 'Không cung cấp wifi' : formatCurrency(data.wifi_charge)
           },
           {
             label: 'Giá thu dọn rác',
-            value: formatCurrency(data.rubbish_charge ?? -1)
+            value: formatCurrency(data.rubbish_charge)
           },
           {
             label: 'Ngày bắt đầu áp dụng',

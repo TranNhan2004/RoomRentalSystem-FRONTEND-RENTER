@@ -38,6 +38,10 @@ export class UserMessage {
   public static readonly PHONE_NUMBER_REQUIRED = 'Số điện thoại không được để trống!';
   public static readonly CITIZEN_NUMBER_REQUIRED = 'Số CCCD không được để trống!';
   public static readonly GENDER_REQUIRED = 'Giới tính không được để trống!';
+  public static readonly WORKPLACE_PROVINCE_REQUIRED = 'Địa chỉ tỉnh/thành phố không được để trống!';
+  public static readonly WORKPLACE_DISTRICT_REQUIRED = 'Địa chỉ huyện/quận/thị xã không được để trống!';
+  public static readonly WORKPLACE_COMMUNE_REQUIRED = 'Địa chỉ xã phường thị trấn không được để trống!';
+  public static readonly WORKPLACE_ADDITIONAL_ADDRESS_REQUIRED = 'Địa chỉ cụ thể không được để trống!';
 
   public static readonly PHONE_NUMBER_FORMAT_ERROR = 'Số điện thoại phải có đủ 10 chữ số!';
   public static readonly CITIZEN_NUMBER_FORMAT_ERROR = 'Số CCCD phải có đủ 12 chữ số!';

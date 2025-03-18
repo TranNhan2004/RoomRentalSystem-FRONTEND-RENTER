@@ -47,8 +47,9 @@ export const Navbar = () => {
 
         <div className='flex items-center justify-center space-x-6 ml-[20]'>
           <NavLink href='/'>Trang chủ</NavLink>
-          <NavLink href='/rental-rooms'>Quản lý trọ</NavLink>
-          <NavLink href='/instructions'>Hướng dẫn</NavLink>
+          <NavLink href='/rental-rooms'>Phòng trọ</NavLink>
+          <NavLink href='/monitoring-rentals'>Theo dõi cho thuê</NavLink>
+          <NavLink href='/save-for-later'>Xem sau</NavLink>
           <NavLink href='/contact'>Liên hệ</NavLink>
         </div>
       

@@ -12,8 +12,8 @@ import { communeService, districtService, provinceService } from '@/services/Add
 import { useRouter } from 'next/navigation';
 import { NOT_FOUND_URL } from '@/lib/client/notFoundURL';
 import { RoomCodesList } from './room-code/RoomCodesList';
-import { ReviewsList } from './review/ReviewsList';
-import { ChargesListsList } from './charges-list/ChargesListsList';
+import { ReviewsList } from '../review/ReviewsList';
+import { ChargesList } from './charges/ChargesList';
 import { ActionButton } from '@/components/partial/button/ActionButton';
 import { Loading } from '@/components/partial/data/Loading';
 import { formatDate } from '@/lib/client/format';
@@ -111,7 +111,7 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
       </div>
 
       <div className='mt-16'>
-        <ChargesListsList roomId={props.id} />
+        <ChargesList roomId={props.id} />
       </div>
 
       <div className='mt-16'>

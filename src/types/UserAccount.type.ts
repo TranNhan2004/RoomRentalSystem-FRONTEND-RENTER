@@ -1,3 +1,5 @@
+import { DistrictType, ProvinceType } from "./Address.type";
+
 export type LoginRequestType = {
   email?: UserType['email'];
   password?: UserType['password'];
@@ -46,10 +48,10 @@ export type UserType = {
 
 export type RegisterUserType = {
   confirm_password?: UserType['password'];
+  _workplace_province?: ProvinceType['id'];
+  _workplace_district?: DistrictType['id'];
 } & Omit<UserType, 
 'id' 
-| 'workplace_commune' 
-| 'workplace_additional_address' 
 | 'last_login' 
 | 'created_at' 
 | 'updated_at'

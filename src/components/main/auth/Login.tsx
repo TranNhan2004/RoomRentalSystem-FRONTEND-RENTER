@@ -68,7 +68,7 @@ export const Login = () => {
   };
 
   return (
-    <Form label='Trang dành cho chủ trọ' className='w-[300px]' onSubmit={handleSubmit} useModal>
+    <Form label='ROOM RENTAL' className='w-[300px]' onSubmit={handleSubmit} useModal>
       <div>
         <Input
           id='email'

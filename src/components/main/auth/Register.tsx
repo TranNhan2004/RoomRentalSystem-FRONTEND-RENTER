@@ -1,6 +1,6 @@
 'use client';
       
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { RegisterUserType } from '@/types/UserAccount.type';
 import { INITIAL_REGISTER_USER } from '@/initials/UserAccount.initial';
@@ -17,15 +17,42 @@ import { AxiosError } from 'axios';
 import { GeneralMessage } from '@/messages/General.message';
 import { Label } from '@/components/partial/form/Label';
 import { dateStrOfMaxAge, dateStrOfMinAge } from '@/lib/client/dateLimit';
-import { Select } from '@/components/partial/form/Select';
+import { OptionType, Select } from '@/components/partial/form/Select';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { formatDate } from '@/lib/client/format';
+import { communeService, districtService, provinceService } from '@/services/Address.service';
+import { CommuneType, DistrictType } from '@/types/Address.type';
+import { mapOptions } from '@/lib/client/handleOptions';
 
 
 export const Register = () => {
   const [reqData, setReqData] = useState<RegisterUserType>(INITIAL_REGISTER_USER);
+  const [provinceOptions, setProvinceOptions] = useState<OptionType[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<OptionType[]>([]);
+  const [communeOptions, setCommuneOptions] = useState<OptionType[]>([]);
+  const originalDistrictDataRef = useRef<DistrictType[]>([]);
+  const originalCommuneDataRef = useRef<CommuneType[]>([]);
+
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    const fetchOptionData = async () => {
+      const [provinceData, districtData, communeData] = await Promise.all([
+        provinceService.getMany(),
+        districtService.getMany(),
+        communeService.getMany(),
+      ]);
+
+      setProvinceOptions(mapOptions(provinceData, ['name'], 'id'));
+      setDistrictOptions(mapOptions(districtData, ['name'], 'id'));
+      setCommuneOptions(mapOptions(communeData, ['name'], 'id'));
+      originalDistrictDataRef.current = districtData;
+      originalCommuneDataRef.current = communeData;
+    };
+
+    fetchOptionData();
+  }, []);
   
   const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     return handleInputChange(e, setReqData);
@@ -144,6 +171,34 @@ export const Register = () => {
         return UserMessage.GENDER_REQUIRED;
       }
       return null;
+    },
+
+    _workplace_province: () => {
+      if (!reqData._workplace_province) {
+        return UserMessage.WORKPLACE_PROVINCE_REQUIRED;
+      }
+      return null;
+    },
+
+    _workplace_district: () => {
+      if (!reqData._workplace_district) {
+        return UserMessage.WORKPLACE_DISTRICT_REQUIRED;
+      }
+      return null;
+    },
+
+    workplace_commune: () => {
+      if (!reqData.workplace_commune) {
+        return UserMessage.WORKPLACE_COMMUNE_REQUIRED;
+      }
+      return null;
+    },
+
+    workplace_additional_address: () => {
+      if (!reqData.workplace_additional_address) {
+        return UserMessage.WORKPLACE_ADDITIONAL_ADDRESS_REQUIRED;
+      }
+      return null;
     }
   };
   
@@ -151,15 +206,54 @@ export const Register = () => {
     setReqData({ ...reqData, gender: e.target.value as RegisterUserType['gender'] });
   };
 
-  const handleNextStep = () => {
-    if (step < 3) {
-      setStep(step + 1);
+  const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setReqData({...reqData, _workplace_province: e.target.value });
+
+    if (e.target.value == '') {
+      setDistrictOptions(mapOptions(originalDistrictDataRef.current, ['name'], 'id'));
+      setCommuneOptions(mapOptions(originalCommuneDataRef.current, ['name'], 'id'));
+    } else {
+      const districts = originalDistrictDataRef.current.filter(
+        district => district.province === e.target.value
+      );
+      setDistrictOptions(mapOptions(districts, ['name'], 'id'));
+
+      const communesArray = districts.map(district => originalCommuneDataRef.current.filter(
+        commune => commune.district === district.id
+      ));
+      setCommuneOptions(mapOptions(communesArray.flat(), ['name'], 'id'));
+    }
+  };
+  
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setReqData({...reqData, _workplace_district: e.target.value });
+
+    if (e.target.value == '') {
+      setCommuneOptions(mapOptions(originalCommuneDataRef.current, ['name'], 'id'));
+    } else {
+      const communes = originalCommuneDataRef.current.filter(
+        commune => commune.district === e.target.value
+      );
+      setCommuneOptions(mapOptions(communes, ['name'], 'id'));
     }
   };
 
-  const handlePrevStep = () => {
+  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setReqData({ ...reqData, workplace_commune: e.target.value });
+  };
+
+  const handleNextStep = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault(); 
+    if (step < 5) {
+      setStep((prev) => prev + 1);
+    }
+  };
+  
+
+  const handlePrevStep = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault(); 
     if (step > 1) {
-      setStep(step - 1);
+      setStep((prev) => prev - 1);
     }
   };
 
@@ -319,7 +413,89 @@ export const Register = () => {
                 max={dateStrOfMinAge}
               />
             </div>
+          </>
+        )   
+      }
+      {
+        step === 4 && (
+          <>
+            <div>
+              <p className='text-gray-800 text-base font-bold'>
+                Địa chỉ nơi làm việc
+              </p>
+            </div> 
 
+            <div className='space-y-1'>
+              <Label htmlFor='workplace-province' required>Tỉnh/Thành phố: </Label>
+              <Select 
+                id='workplace-province'
+                value={reqData._workplace_province}
+                options={provinceOptions}
+                onChange={handleProvinceChange}
+                validate={validators._workplace_province}
+              />
+            </div>
+
+            <div className='space-y-1'>
+              <Label htmlFor='workplace-district' required>Huyện/Quận/Thị xã: </Label>
+              <Select 
+                id='-workplace-district'
+                value={reqData._workplace_district}
+                options={districtOptions}
+                onChange={handleDistrictChange}
+                validate={validators._workplace_district}
+              />
+            </div>
+
+            <div className='space-y-1'>
+              <Label htmlFor='workplace-commune' required>Xã/Phường/Thị trấn: </Label>
+              <Select 
+                id='workplace-commune'
+                value={reqData.workplace_commune}
+                options={communeOptions}
+                onChange={handleCommuneChange}
+                validate={validators.workplace_commune}
+              />
+            </div>
+          </>
+        )
+      }
+      {
+        step === 5 && (
+          <>
+            <div>
+              <p className='text-gray-800 text-base font-bold'>
+                Địa chỉ nơi làm việc
+              </p>
+            </div> 
+
+            <div className='space-y-1'>
+              <Label htmlFor='workplace-additional-address' required>Địa chỉ cụ thể: </Label>
+              <div className='flex items-center space-x-2'>
+                <Input 
+                  id='workplace-additional-address'
+                  name='workplace_additional_address'
+                  type='text'
+                  className='w-[360px]'
+                  value={reqData.workplace_additional_address}
+                  onChange={handleInputOnChange}
+                  validate={validators.workplace_additional_address}
+                />
+                <button
+                  type='button'
+                  className='w-6 h-6 bg-gray-300 rounded-full hover:bg-gray-400'
+                  onClick={() => alert(`
+1. Lưu ý, để hệ thống tính toán chính xác, nên tra trước địa chỉ đang làm việc hiện tại của bạn trên Google Maps để xác minh. Nêu không tồn tại địa chỉ chính xác thì dùng tạm 1 địa chỉ lân cận.
+2. Sau khi xác minh xong, hãy nhập địa chỉ cụ thể theo cú pháp sau:
+2.1. Nếu là tòa nhà, thì nhập đúng tên tòa nhà.
+2.2. Nếu dùng số nhà thì cần nhập theo cú pháp <Số nhà>, Hẻm <Số hẻm>, Đ. <Tên đường>. Ví dụ: 123, Hẻm 12, Đ. Trần Hưng Đạo
+                  `)}
+                >
+                  <span className='text-gray-800 font-bold'>?</span>
+                </button>
+              </div>
+            </div>
+            
             <div>
               <p className='italic text-gray-500 text-sm'>
                 Vui lòng truy cập vào email của bạn để lấy liên kết kích hoạt tài khoản
@@ -334,15 +510,15 @@ export const Register = () => {
       </div>
 
       <div className='text-left italic font-bold'>
-        <p>Bước {step}/3</p>
+        <p>Bước {step}/5</p>
       </div>
 
-      <div className="flex justify-between mt-4">
+      <div className='flex justify-between mt-4'>
         {
           step > 1 && (
             <button 
-              type="button" 
-              className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+              type='button' 
+              className='px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400'
               onClick={handlePrevStep}
             >
               <div className='flex items-center'>
@@ -352,9 +528,9 @@ export const Register = () => {
           )
         }
         {
-          step < 3 ? (
+          step < 5 ? (
             <button 
-              type="button" 
+              type='button' 
               className={`px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-800`}
               onClick={handleNextStep}
             >
@@ -364,7 +540,7 @@ export const Register = () => {
             </button>
           ) : (
             <button 
-              type="submit" 
+              type='submit' 
               className={`font-semibold px-4 py-2 text-white rounded-lg
                         ${isSubmitted ? 
                           'bg-mydarkgreen cursor-not-allowed disabled' : 
