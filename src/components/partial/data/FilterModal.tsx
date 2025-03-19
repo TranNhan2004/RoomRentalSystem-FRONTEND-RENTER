@@ -37,7 +37,7 @@ export const FilterModal = (props: FilterModalProps) => {
     <div>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="border border-gray-300 hover:bg-gray-100 p-2 rounded-lg 
+        className="border border-gray-300 bg-white hover:bg-gray-100 p-2 rounded-lg 
                     flex items-center justify-center"
       >
         <FunnelIcon className="w-5 h-5 text-gray-600" />

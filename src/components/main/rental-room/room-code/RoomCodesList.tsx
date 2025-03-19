@@ -1,36 +1,35 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { handleDeleteAlert, toastError, toastSuccess } from '@/lib/client/alert';
-import { Table, DisplayedDataType } from '@/components/partial/data/Table';
-import { useRouter } from 'next/navigation';
-import { ActionButton } from '@/components/partial/button/ActionButton';
 import { Title } from '@/components/partial/data/Title';
 import { InputSearch } from '@/components/partial/data/InputSearch';
 import { Sorting } from '@/components/partial/data/Sorting';
-import { AxiosError } from 'axios';
-import { GeneralMessage } from '@/messages/General.message';
 import { roomCodeService } from '@/services/RentalRoom.service';
-import { DataLine } from '@/components/partial/data/DataLine';
 import { RoomCodeType } from '@/types/RentalRoom.type';
 import { RoomCodeMessage } from '@/messages/RentalRoom.message';
+import { RoomCodeCard } from './RoomCodeCard';
+import { PaginationNav } from '@/components/partial/data/PaginationNav';
+import { Loading } from '@/components/partial/data/Loading';
+import { toastError } from '@/lib/client/alert';
 
 type RoomCodesListProps = {
   roomId: string;
 }
 
 export const RoomCodesList = (props: RoomCodesListProps) => {
-  const router = useRouter();
-  const originialDataRef = useRef<RoomCodeType[]>([]);
+  const originalDataRef = useRef<RoomCodeType[]>([]);
   const [data, setData] = useState<RoomCodeType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const cardsPerPage = 20;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const data = await roomCodeService.getMany({ rental_room: props.roomId });
-        originialDataRef.current = data;
+        originalDataRef.current = data;
         setData(data);
       
       } catch {
@@ -44,55 +43,8 @@ export const RoomCodesList = (props: RoomCodesListProps) => {
     fetchData();
   }, [props.roomId]);
 
-  const generateDataForTable = (): DisplayedDataType[] => {
-    return data.map((item) => ({
-      id: `${item.id}`,
-      basicInfo: (
-        <>
-          <DataLine label='Mã phòng' value={item.value} />
-          <DataLine label='Số người ở tối đa' value={item.max_occupancy} />
-        </>
-      ),
-    }));
-  };
-
-  const handleDeleteError = async (error: unknown) => {
-    if (!(error instanceof AxiosError)) {
-      await toastError(GeneralMessage.UNKNOWN_ERROR);
-      return;
-    }
-
-    if (
-      error.response?.status === 500 && 
-      error.response.data?.includes(GeneralMessage.BACKEND_PROTECTED_ERROR_PREFIX)
-    ) {
-      await toastError(RoomCodeMessage.DELETE_PROTECTED_ERROR);
-      return;
-    }
-    
-    await toastError(RoomCodeMessage.DELETE_ERROR);
-  };
-
-  const deleteFunction = async (id: string) => {
-    await handleDeleteAlert(async () => {
-      try {
-        await roomCodeService.delete(id);
-        await toastSuccess(RoomCodeMessage.DELETE_SUCCESS);
-        originialDataRef.current = originialDataRef.current.filter((item) => item.id !== id);
-        setData(originialDataRef.current); 
-      
-      } catch (error) {
-        await handleDeleteError(error);
-      }
-    });
-  };
-
-  const detailsFunction = (id: string) => {
-    router.push(`${props.roomId}/room-codes/${id}`);
-  };
-
-  const addOnClick = () => {
-    router.push(`${props.roomId}/room-codes/add`);
+  const onPageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
   };
 
   return (
@@ -103,7 +55,7 @@ export const RoomCodesList = (props: RoomCodesListProps) => {
           <InputSearch 
             placeholder='Tìm kiếm theo mã phòng'
             options={['value']}
-            originalData={originialDataRef.current}
+            originalData={originalDataRef.current}
             data={data}
             setData={setData}
           />
@@ -115,33 +67,57 @@ export const RoomCodesList = (props: RoomCodesListProps) => {
               { label: 'Mã phòng (A-Z)', value: 'asc-value' },
               { label: 'Mã phòng (Z-A)', value: 'desc-value' },
             ]}
-            originalData={originialDataRef.current}
+            originalData={originalDataRef.current}
             data={data}
             setData={setData}
           />
         </div>
-
-        <div className='ml-auto'>
-          <ActionButton mode='add' onClick={addOnClick}>Thêm mới</ActionButton>
-        </div>
       </div>
 
-      <Table 
-        data={generateDataForTable()}
-        loading={loading}
-        actions={[
-          {
-            rowName: 'Chi tiết',
-            function: detailsFunction,
-            buttonConfig: { mode: 'details' }
-          },
-          {
-            rowName: 'Xóa',
-            function: deleteFunction,
-            buttonConfig: { mode: 'delete' }
-          }
-        ]}
-      />
+      {
+        loading ? (
+          <Loading textSize={12} />
+        ) : (
+          <>  
+            <div className='mt-8 flex items-center space-x-6'>
+              <p><b>Trong đó:</b></p>
+              <div className='flex items-center'>
+                <span className='block w-4 h-4 bg-mygreen rounded-sm'></span>
+                <p>&nbsp; - Phòng trống hoàn toàn</p>
+              </div>
+              <div className='flex items-center'>
+                <span className='block w-4 h-4 bg-yellow-500 rounded-sm'></span>
+                <p>&nbsp; - Phòng có thể ở ghép</p>
+              </div>
+              <div className='flex items-center'>
+                <span className='block w-4 h-4 bg-gray-500 rounded-sm'></span>
+                <p>&nbsp; - Phòng không trống hoặc không thể ở ghép</p>
+              </div>
+            </div>
+            <div className='grid grid-cols-4 gap-4 mt-5 mb-8'>
+              {
+                data.length === 0 
+                  ? 'Không có dữ liệu' 
+                  : data.map((item, index) => (
+                    <RoomCodeCard
+                      key={index}
+                      value={item.value}
+                      maxOccupancy={item.max_occupancy}
+                      currentOccupancy={item.current_occupancy}
+                      isShared={item.is_shared}
+                    />
+                  )) 
+              }
+            </div>
+            <PaginationNav
+              totalPages={Math.ceil(data.length / cardsPerPage)}
+              currentPage={currentPage}
+              onPageChange={onPageChange}
+              step={6}
+            />
+          </>
+        )
+      }
     </div>
   );
 };

@@ -14,6 +14,7 @@ export default {
         "mygreen": "#13C394",
         "mydarkgreen": "#11AB82",
         "mylightgreen": "#CFF9E0",
+        "mygreen2": "#57ECA6",
       },
       animation: {
         bounce1: 'bounce 1.2s infinite ease-in-out 0s',

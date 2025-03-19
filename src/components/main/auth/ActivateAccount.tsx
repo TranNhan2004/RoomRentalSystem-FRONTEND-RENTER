@@ -41,8 +41,8 @@ export const ActivateAccount = (props: ActivateAccountProps) => {
   return (
     <div className='flex items-center justify-center text-lg space-x-2'>
       <h1>
-        Đã kích hoạt thành công thành công! Vui lòng trở lại trang
-        <Link href={'/auth/login'} className='underline text-blue-500 text-left'> đăng nhập</Link>
+        Đã kích hoạt thành công thành công! Vui lòng trở lại trang &nbsp;
+        <Link href={'/auth/login'} className='underline text-blue-500 text-left'>đăng nhập</Link>
       </h1>
     </div>
   );

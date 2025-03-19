@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { handleDeleteAlert, toastError, toastSuccess } from '@/lib/client/alert';
+import { toastError } from '@/lib/client/alert';
 import { useRouter } from 'next/navigation';
-import { Title } from '@/components/partial/data/Title';
 import { InputSearch } from '@/components/partial/data/InputSearch';
 import { Sorting } from '@/components/partial/data/Sorting';
 import { FilterModal } from '@/components/partial/data/FilterModal';
 import { Label } from '@/components/partial/form/Label';
 import { OptionType, Select } from '@/components/partial/form/Select';
-import { getMyInfo } from '@/lib/client/authToken';
 import { RentalRoomQueryType, RentalRoomType } from '@/types/RentalRoom.type';
 import { INITIAL_RENTAL_ROOM_QUERY } from '@/initials/RentalRoom.initial';
 import { chargesService, roomImageService, rentalRoomService } from '@/services/RentalRoom.service';
@@ -19,24 +17,23 @@ import { mapOptions } from '@/lib/client/handleOptions';
 import { CommuneType, DistrictType } from '@/types/Address.type';
 import { Loading } from '@/components/partial/data/Loading';
 import { RentalRoomCard } from './RentalRoomCard';
-import { ActionButton } from '@/components/partial/button/ActionButton';
-import { AxiosError } from 'axios';
 import { GeneralMessage } from '@/messages/General.message';
 import { PaginationNav } from '@/components/partial/data/PaginationNav';
+import { Taskbar } from '@/components/partial/data/Taskbar';
 
 
 export const RentalRoomsList = () => {
   const router = useRouter();
-  const originialDataRef = useRef<RentalRoomType[]>([]);
-  const myIdRef = useRef<string | undefined>(undefined);
+  const originalDataRef = useRef<RentalRoomType[]>([]);
+
   const [data, setData] = useState<RentalRoomType[]>([]);
-  const [displayedData, setDisplayedData] = useState<RentalRoomType[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState<RentalRoomQueryType>(INITIAL_RENTAL_ROOM_QUERY); 
   const [provinceOptions, setProvinceOptions] = useState<OptionType[]>([]);
   const [districtOptions, setDistrictOptions] = useState<OptionType[]>([]);
   const [communeOptions, setCommuneOptions] = useState<OptionType[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState('all');
 
   const originalDistrictDataRef = useRef<DistrictType[]>([]);
   const originalCommuneDataRef = useRef<CommuneType[]>([]);
@@ -48,8 +45,8 @@ export const RentalRoomsList = () => {
     await Promise.all(
       data.map(async (item) => {
         const [imageData, chargesData] = await Promise.all([
-          roomImageService.getMany({ rental_room: item.id, mode: 'first' }),
-          chargesService.getMany({ rental_room: item.id, mode: 'first' })
+          roomImageService.getMany({ rental_room: item.id, first_only: true }),
+          chargesService.getMany({ rental_room: item.id, first_only: true })
         ]);
         
         newData = newData.map(thisItem => {
@@ -72,18 +69,17 @@ export const RentalRoomsList = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        myIdRef.current = (await getMyInfo()).id;
 
         const [data, provinceData, districtData, communeData] = await Promise.all([
-          rentalRoomService.getMany({ lessor: myIdRef.current }),
+          rentalRoomService.getMany({ manager_is_null: false }),
           provinceService.getMany(),
           districtService.getMany(),
           communeService.getMany(),
         ]);
 
-        originialDataRef.current = await fetchRelatedData(data);
+        originalDataRef.current = await fetchRelatedData(data);
         
-        setData([...originialDataRef.current]);
+        setData([...originalDataRef.current]);
         setProvinceOptions(mapOptions(provinceData, ['name'], 'id'));
         setDistrictOptions(mapOptions(districtData, ['name'], 'id'));
         setCommuneOptions(mapOptions(communeData, ['name'], 'id'));
@@ -103,50 +99,41 @@ export const RentalRoomsList = () => {
   }, [fetchRelatedData]);
 
   useEffect(() => {
-    setDisplayedData(data.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage));
-  }, [data, currentPage]);
+    setData(originalDataRef.current.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage));
+  }, [currentPage]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        if (viewMode === 'all') {
+          const data = await rentalRoomService.getMany({ manager_is_null: false })
+          originalDataRef.current = await fetchRelatedData(data);
+          setData([...originalDataRef.current]);
+          
+        } else if (viewMode === 'recommend') {
+
+        
+        } else {
+          await toastError(GeneralMessage.UNKNOWN_ERROR);
+          return;
+        }
+      } catch {
+
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [viewMode, fetchRelatedData]);
 
   const onPageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
   };
 
-  const handleDeleteError = async (error: unknown) => {
-    if (!(error instanceof AxiosError)) {
-      await toastError(GeneralMessage.UNKNOWN_ERROR);
-      return;
-    }
-
-    if (
-      error.response?.status === 500 && 
-      error.response.data?.includes(GeneralMessage.BACKEND_PROTECTED_ERROR_PREFIX)
-    ) {
-      await toastError(RentalRoomMessage.DELETE_PROTECTED_ERROR);
-      return;
-    }
-    
-    await toastError(RentalRoomMessage.DELETE_ERROR);
-  };
-
-  const deleteFunction = async (id: string) => {
-    await handleDeleteAlert(async () => {
-      try {
-        await rentalRoomService.delete(id);
-        await toastSuccess(RentalRoomMessage.DELETE_SUCCESS);
-        originialDataRef.current = originialDataRef.current.filter((item) => item.id !== id);
-        setData(originialDataRef.current); 
-      
-      } catch (error) {
-        await handleDeleteError(error);
-      }
-    });
-  };
-
   const detailsFunction = (id: string) => {
     router.push(`rental-rooms/${id}`);
-  };
-
-  const addOnClick = () => {
-    router.push(`rental-rooms/add`);
   };
 
   const filterOnClick = async () => {
@@ -165,8 +152,8 @@ export const RentalRoomsList = () => {
         ));
 
         const data = dataArray.flat();
-        originialDataRef.current = await fetchRelatedData(data);
-        setData([...originialDataRef.current]);
+        originalDataRef.current = await fetchRelatedData(data);
+        setData([...originalDataRef.current]);
 
       } else if (query._district !== '' && query.commune === '') {
         const communes = await communeService.getMany({ district: query._district });
@@ -174,13 +161,13 @@ export const RentalRoomsList = () => {
           commune => rentalRoomService.getMany({ ...query, commune: commune.id })
         ));
         const data = dataArray.flat();
-        originialDataRef.current = await fetchRelatedData(data);
-        setData([...originialDataRef.current]);
+        originalDataRef.current = await fetchRelatedData(data);
+        setData([...originalDataRef.current]);
 
       } else {
         const data = await rentalRoomService.getMany(query);
-        originialDataRef.current = await fetchRelatedData(data);
-        setData([...originialDataRef.current]);
+        originalDataRef.current = await fetchRelatedData(data);
+        setData([...originalDataRef.current]);
       }
       
     } catch {
@@ -219,17 +206,8 @@ export const RentalRoomsList = () => {
     setQuery({ ...query, commune: e.target.value });
   };
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    if (value === 'pending') {
-      setQuery({ ...query, manager_is_null: true });
-    
-    } else if (value === 'approved') {
-      setQuery({ ...query, manager_is_null: false });
-    
-    } else {
-      setQuery({...query, manager_is_null: undefined });
-    }
+  const handleViewModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setViewMode(e.target.value);
   };
 
   if (loading) {
@@ -238,19 +216,18 @@ export const RentalRoomsList = () => {
 
   return (
     <div>
-      <Title>Danh sách phòng trọ</Title>
-      <div className='flex items-center'>
-        <div className='w-[40%]'>
+      <Taskbar>
+        <div className='w-[45%]'>
           <InputSearch 
             placeholder='Tìm kiếm theo tên phòng trọ'
             options={['name']}
-            originalData={originialDataRef.current}
+            originalData={originalDataRef.current}
             data={data}
             setData={setData}
           />
         </div>
 
-        <div className='ml-[30px]'>
+        <div className='ml-[10px]'>
           <Sorting
             options={[
               { label: 'Tên phòng trọ (A-Z)', value: 'asc-name' },
@@ -258,13 +235,27 @@ export const RentalRoomsList = () => {
               { label: 'Mới nhất', value: 'desc-created_at' },
               { label: 'Cũ nhất', value: 'asc-created_at' },
             ]}
-            originalData={originialDataRef.current}
+            originalData={originalDataRef.current}
             data={data}
             setData={setData}
           />
         </div>
 
-        <div className='ml-[10px]'>
+        <div className='ml-[80px] flex items-center space-x-4'>
+          <Label htmlFor='view-mode'><p className='font-semibold'>Chế độ xem:</p></Label>
+          <Select
+            id='view-mode'
+            options={[
+              { label: 'Tất cả', value: 'all' },
+              { label: 'Gợi ý', value: 'recommend' },
+            ]}
+            value={viewMode}
+            onChange={handleViewModeChange}
+            notUseEmptyValue
+          />
+        </div>
+
+        <div className='flex ml-auto'>
           <FilterModal
             filterOnClick={filterOnClick}
             refreshOnClick={refreshOnClick}
@@ -302,7 +293,7 @@ export const RentalRoomsList = () => {
               />
             </div> 
 
-            <div className='grid grid-cols-2 items-center mt-1 mb-1'>
+            {/* <div className='grid grid-cols-2 items-center mt-1 mb-1'>
               <Label htmlFor='status-query'>Trạng thái: </Label>
               <Select
                 id='status-query'
@@ -317,22 +308,18 @@ export const RentalRoomsList = () => {
                 ]}
                 onChange={handleStatusChange}
               />
-            </div>  
+            </div>   */}
           </FilterModal>
         </div>
-
-        <div className='flex ml-auto'>
-          <ActionButton mode='add' onClick={addOnClick}>Thêm mới</ActionButton>
-        </div>
-      </div>
+      </Taskbar>
       
       <div className='min-h-screen flex flex-col'>
         <div className='flex-grow mt-12'>
           <div className='grid grid-cols-4 gap-4'>
             {
-              displayedData.length === 0 
+              data.length === 0 
                 ? 'Không có dữ liệu' 
-                : displayedData.map((item, index) => (
+                : data.map((item, index) => (
                   <RentalRoomCard
                     key={index}
                     id={item.id}
@@ -342,7 +329,6 @@ export const RentalRoomsList = () => {
                     image={item._image}
                     roomCharge={item._room_charge}
                     detailsFunction={detailsFunction}
-                    deleteFunction={deleteFunction}
                   />
                 )) 
             }

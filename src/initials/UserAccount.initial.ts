@@ -45,8 +45,12 @@ export const INITIAL_REGISTER_USER: RegisterUserType = {
   phone_number: '',
   citizen_number: '',
   date_of_birth: new Date(),
+  _workplace_province: '',
+  _workplace_district: '',
+  workplace_commune: '',
+  workplace_additional_address: '',
   gender: 'UNKNOWN',
-  role: 'LESSOR',
+  role: 'RENTER',
   is_active: false
 };
 

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import { RentalRoomType, RoomImageType, ChargesType } from '@/types/RentalRoom.type';
 import { RatingStar } from '@/components/partial/data/RatingStar';
 import { ActionButton } from '@/components/partial/button/ActionButton';
@@ -17,7 +16,6 @@ type RentalRoomCardProps = {
   image?: RoomImageType['image'];
   roomCharge?: ChargesType['room_charge'];
   detailsFunction?: (id: string) => void;
-  deleteFunction?: (id: string) => void;
 };
 
 export const RentalRoomCard = (props: RentalRoomCardProps) => {
@@ -41,37 +39,19 @@ export const RentalRoomCard = (props: RentalRoomCardProps) => {
           {formatCurrency(props.roomCharge)}
         </div>
 
-        <div className="flex items-center mb-1">
+        <div className="flex items-center mb-5">
           <RatingStar value={props.averageRating ?? 0} />
           <span className="ml-2 text-gray-600 text-sm">
             {`${props.averageRating}/5`}
           </span>
         </div>
-
-        <div className="flex items-center mb-2">
-          { 
-            props.manager ?                
-              <CheckCircleIcon className="h-6 w-6 text-green-500 mr-2" /> : 
-              <XCircleIcon className="h-6 w-6 text-red-500 mr-2" />
-          }
-          <span className="text-gray-600">
-            {props.manager ? 'Đã được duyệt' : 'Chưa được duyệt'}
-          </span>
-        </div>
-
+        
         <div className='flex items-center space-x-2 justify-end'>
           <ActionButton 
             mode='details' 
             onClick={() => props.detailsFunction?.(props.id ?? '')}
           >
             Chi tiết
-          </ActionButton>
-          
-          <ActionButton 
-            mode='delete' 
-            onClick={() => props.deleteFunction?.(props.id ?? '')}
-          >
-            Xóa
           </ActionButton>
         </div>
       </div>

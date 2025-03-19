@@ -8,7 +8,7 @@ export const INITIAL_CHARGES_LIST: ReviewType = {
   renter: '',
 } as const;
 
-export const INITIAL_REVIEW_QUERY_TYPE: ReviewQueryType = {
+export const INITIAL_REVIEW_QUERY: ReviewQueryType = {
   rental_room: '',
   renter: '',
   rating: 5,

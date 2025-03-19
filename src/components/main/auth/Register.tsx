@@ -7,7 +7,6 @@ import { INITIAL_REGISTER_USER } from '@/initials/UserAccount.initial';
 import { handleInputChange } from '@/lib/client/handleInputChange';
 import { Validators } from '@/types/Validators.type';
 import { AuthMessage, UserMessage } from '@/messages/UserAccount.message';
-import { EMAIL_REG_EXP, isValidForm, PASSWORD_REG_EXP, PHONE_NUMBER_REG_EXP } from '@/lib/client/isValidForm';
 import { authService } from '@/services/UserAccount.service';
 import { toastError, toastSuccess } from '@/lib/client/alert';
 import { Input } from '@/components/partial/form/Input';
@@ -23,6 +22,13 @@ import { formatDate } from '@/lib/client/format';
 import { communeService, districtService, provinceService } from '@/services/Address.service';
 import { CommuneType, DistrictType } from '@/types/Address.type';
 import { mapOptions } from '@/lib/client/handleOptions';
+import { 
+  isValidForm, 
+  CITIZEN_NUMBER_REG_EXP, 
+  EMAIL_REG_EXP, 
+  PASSWORD_REG_EXP, 
+  PHONE_NUMBER_REG_EXP 
+} from '@/lib/client/isValidForm';
 
 
 export const Register = () => {
@@ -160,7 +166,7 @@ export const Register = () => {
       if (!reqData.citizen_number) {
         return UserMessage.CITIZEN_NUMBER_REQUIRED;
       }
-      if (reqData.citizen_number.length !== 12) {
+      if (!CITIZEN_NUMBER_REG_EXP.test(reqData.citizen_number)) {
         return UserMessage.CITIZEN_NUMBER_FORMAT_ERROR;
       }
       return null;
@@ -269,7 +275,6 @@ export const Register = () => {
     setIsSubmitted(true);
     
     try {
-      alert(JSON.stringify(reqData));
       await authService.register(reqData);
       await toastSuccess(AuthMessage.REGISTER_SUCCESS);
 
@@ -369,6 +374,7 @@ export const Register = () => {
                 ]}
                 onChange={handleGenderChange}
                 validate={validators.gender}
+                notUseEmptyValue
               />
             </div>
           </>
