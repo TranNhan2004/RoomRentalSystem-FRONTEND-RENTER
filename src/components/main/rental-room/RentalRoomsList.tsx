@@ -20,6 +20,8 @@ import { RentalRoomCard } from './RentalRoomCard';
 import { GeneralMessage } from '@/messages/General.message';
 import { PaginationNav } from '@/components/partial/data/PaginationNav';
 import { Taskbar } from '@/components/partial/data/Taskbar';
+import { distanceService } from '@/services/Distance.service';
+import { getMyInfo } from '@/lib/client/authToken';
 
 
 export const RentalRoomsList = () => {
@@ -36,6 +38,7 @@ export const RentalRoomsList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState('all');
 
+  const myIdRef = useRef<string | undefined>(undefined);
   const originalDistrictDataRef = useRef<DistrictType[]>([]);
   const originalCommuneDataRef = useRef<CommuneType[]>([]);
   
@@ -50,13 +53,19 @@ export const RentalRoomsList = () => {
       item => chargesService.getMany({ rental_room: item.id, first_only: true })
     ));
 
+    const distanceDataArray = await Promise.all(data.map(
+      item => distanceService.getMany({ rental_room: item.id, renter: myIdRef.current })
+    ));
+
     const imageData = imageDataArray.flat();
     const chargesData = chargesDataArray.flat();
+    const distanceData = distanceDataArray.flat();
 
     return data.map(item => ({
       ...item,
-      _image: imageData.length ? imageData[0].image : '',
-      _room_charge: chargesData.length ? chargesData[0].room_charge : -1,
+      _image: imageData.length > 0 ? imageData[0].image : '',
+      _room_charge: chargesData.length > 0 ? chargesData[0].room_charge : -1,
+      _distance_value: distanceData.length > 0 ? distanceData[0].value : -1, 
     }));
   }, []);
 
@@ -64,6 +73,7 @@ export const RentalRoomsList = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        myIdRef.current = (await getMyInfo()).id;
 
         const [data, provinceData, districtData, communeData] = await Promise.all([
           rentalRoomService.getMany({ manager_is_null: false }),
@@ -94,8 +104,8 @@ export const RentalRoomsList = () => {
   }, [fetchRelatedData]);
 
   useEffect(() => {
-    setDisplayedData(originalDataRef.current.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage));
-  }, [currentPage]);
+    setDisplayedData([...data.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage)]);
+  }, [data, currentPage]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -315,15 +325,10 @@ export const RentalRoomsList = () => {
             {
               displayedData.length === 0 
                 ? 'Không có dữ liệu' 
-                : displayedData.map((item, index) => (
+                : displayedData.map((item) => (
                   <RentalRoomCard
-                    key={index}
-                    id={item.id}
-                    name={item.name}
-                    manager={item.manager}
-                    averageRating={item.average_rating}
-                    image={item._image}
-                    roomCharge={item._room_charge}
+                    key={item.id}
+                    item={item}
                     detailsFunction={detailsFunction}
                   />
                 )) 

@@ -38,7 +38,7 @@ export const FilterModal = (props: FilterModalProps) => {
     <div>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`border border-gray-300 ${props.disabled ? 'cursor-not-allowed bg-gray-100' : 'bg-white hover:bg-gray-100'} 
+        className={`border border-gray-300 ${props.disabled ? 'cursor-not-allowed bg-gray-300' : 'bg-white hover:bg-gray-100'} 
                     p-2 rounded-lg flex items-center justify-center`}
         disabled={props.disabled}
       >

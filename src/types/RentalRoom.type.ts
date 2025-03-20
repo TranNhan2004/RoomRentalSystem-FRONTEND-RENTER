@@ -9,6 +9,7 @@ export type RentalRoomType = {
   total_number?: number;
   _room_charge?: ChargesType['room_charge'];
   _image?: RoomImageType['image'];
+  _distance_value?: number;
   further_description?: string;
   average_rating?: number;
   lessor?: string;
