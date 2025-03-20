@@ -22,6 +22,7 @@ import { PaginationNav } from '@/components/partial/data/PaginationNav';
 import { Taskbar } from '@/components/partial/data/Taskbar';
 import { distanceService } from '@/services/Distance.service';
 import { getMyInfo } from '@/lib/client/authToken';
+import { setSearchToLocalStorage } from '@/services/SearchRoomHistory.service';
 
 
 export const RentalRoomsList = () => {
@@ -91,7 +92,7 @@ export const RentalRoomsList = () => {
 
         originalDistrictDataRef.current = districtData;
         originalCommuneDataRef.current = communeData;
-        
+    
       } catch {
         await toastError(RentalRoomMessage.GET_MANY_ERROR);
       
@@ -137,8 +138,9 @@ export const RentalRoomsList = () => {
     setCurrentPage(pageNumber);
   };
 
-  const detailsFunction = (id: string) => {
+  const detailsFunction = async (id: string) => {
     router.push(`rental-rooms/${id}`);
+    await setSearchToLocalStorage(id, myIdRef.current ?? '');
   };
 
   const filterOnClick = async () => {
@@ -245,12 +247,14 @@ export const RentalRoomsList = () => {
             options={[
               { label: 'Tên phòng trọ (A-Z)', value: 'asc-name' },
               { label: 'Tên phòng trọ (Z-A)', value: 'desc-name' },
-              { label: 'Mới nhất', value: 'desc-created_at' },
-              { label: 'Cũ nhất', value: 'asc-created_at' },
+              { label: 'Số sao tăng dần', value: 'asc-average_rating' },
+              { label: 'Số sao giảm dần', value: 'desc-average_rating' },
               { label: 'Khoảng cách tăng dần', value: 'asc-_distance_value'},
               { label: 'Khoảng cách giảm dần', value: 'desc-_distance_value'},
               { label: 'Giá phòng tăng dần', value: 'asc-_room_charge'},
               { label: 'Giá phòng giảm dần', value: 'desc-_room_charge'},
+              { label: 'Mới nhất', value: 'desc-created_at' },
+              { label: 'Cũ nhất', value: 'asc-created_at' },
             ]}
             originalData={originalDataRef.current}
             data={data}

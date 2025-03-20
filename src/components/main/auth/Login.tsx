@@ -15,12 +15,17 @@ import { Form } from '@/components/partial/form/Form';
 import { Input } from '@/components/partial/form/Input';
 import { Spin } from '@/components/partial/data/Spin';
 import { Validators } from '@/types/Validators.type';
+import { 
+  getSearchFromLocalStorage, 
+  removeSearchFromLocalStorage, 
+  searchRoomHistoryService 
+} from '@/services/SearchRoomHistory.service';
 
 export const Login = () => {
   const router = useRouter();
   const [reqData, setReqData] = useState<LoginRequestType>(INITIAL_LOGIN_REQUEST);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
-  
+
   const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     return handleInputChange(e, setReqData);
   };
@@ -60,6 +65,17 @@ export const Login = () => {
     try {
       const data = await authService.login(reqData);
       await handleLogin(data);
+
+      const searchRoomHistory = await getSearchFromLocalStorage();
+    
+      if (searchRoomHistory.length > 0) {
+        await Promise.all(searchRoomHistory.map(
+          item => searchRoomHistoryService.post(item) 
+        ));    
+
+        await removeSearchFromLocalStorage();
+      } 
+
       router.replace('/');
     } catch {
       await toastError(AuthMessage.LOGIN_ERROR);
