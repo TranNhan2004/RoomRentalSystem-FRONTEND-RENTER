@@ -72,7 +72,6 @@ export const INITIAL_MONITORING_RENTAL: MonitoringRentalType = {
   id: '',
   room_code: '',
   renter: '',
-  _renter_phone_number: '',
   start_date: new Date(),
 } as const;
 
@@ -80,6 +79,8 @@ export const INITIAL_MONITORING_RENTAL: MonitoringRentalType = {
 export const INITIAL_RENTAL_ROOM_QUERY: RentalRoomQueryType = {
   commune: '',
   lessor: '',
+  _room_charge_range: '',
+  _empty_mode: '',
   _province: '',
   _district: '',
 } as const;

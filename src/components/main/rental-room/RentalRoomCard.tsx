@@ -29,7 +29,7 @@ export const RentalRoomCard = (props: RentalRoomCardProps) => {
 
       <div className="relative top-3 bottom-5 right-5 bg-gradient-to-r from-blue-500 to-green-500 text-white text-[16px] font-medium px-3 py-1 rounded-full shadow-md">
         <p className='text-left ml-7'>
-          Khoảng cách: {round(props.item._distance_value, 1)} km
+          Khoảng cách: {round(props.item._distance_value, 1).toString().replace('.', ',')} km
         </p>
       </div>
 

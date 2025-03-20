@@ -9,19 +9,51 @@ import { useRouter } from 'next/navigation';
 import { DataLine } from '@/components/partial/data/DataLine';
 import { DefaultAvatar } from '@/components/partial/account/DefaultAvatar';
 import { formatDate } from '@/lib/client/format';
+import { INITIAL_USER } from '@/initials/UserAccount.initial';
+import { INITIAL_COMMUNE, INITIAL_DISTRICT, INITIAL_PROVINCE } from '@/initials/Address.initial';
+import { CommuneType, DistrictType, ProvinceType } from '@/types/Address.type';
+import { communeService, districtService, provinceService } from '@/services/Address.service';
+import { toastError } from '@/lib/client/alert';
+import { UserMessage } from '@/messages/UserAccount.message';
+import { Loading } from '@/components/partial/data/Loading';
 
 
 export const Profile = () => {
   const router = useRouter();
-  const [myInfoData, setMyInfoData] = useState<UserType>({});
+  const [myInfoData, setMyInfoData] = useState<UserType>(INITIAL_USER);
+  const [loading, setLoading] = useState(false);
+  const [provinceData, setProvinceData] = useState<ProvinceType>(INITIAL_PROVINCE);
+  const [districtData, setDistrictData] = useState<DistrictType>(INITIAL_DISTRICT);
+  const [communeData, setCommuneData] = useState<CommuneType>(INITIAL_COMMUNE);
 
   useEffect(() => {
     const setMyInfoDataFromCookie = async () => {
-      setMyInfoData(await getMyInfo());
+      try {
+        setLoading(true);
+        const myInfo = await getMyInfo();
+        const communeData = await communeService.get(myInfo.workplace_commune ?? '');
+        const districtData = await districtService.get(communeData.district ?? '');
+        const provinceData = await provinceService.get(districtData.province ?? '');
+
+        setMyInfoData(myInfo);
+        setProvinceData(provinceData);
+        setDistrictData(districtData);
+        setCommuneData(communeData);
+      
+      } catch {
+        await toastError(UserMessage.GET_ERROR);
+      
+      } finally {
+        setLoading(false);
+      } 
     };
 
     setMyInfoDataFromCookie();
   }, []);
+
+  if (loading) {
+    return <Loading />;
+  }
 
   return (
     <div className='p-6 w-full ml-[5%]'>
@@ -40,7 +72,7 @@ export const Profile = () => {
 
         <div className='border-l-4 border-gray-200 rounded-sm ml-[15%] h-[105%]'></div>
         
-        <div className='flex flex-col justify-center space-y-4 ml-[-65%] mt-[-10%]'>
+        <div className='flex flex-col justify-center space-y-4 ml-[-65%] mt-[-2%] mr-20'>
           <h2 className='text-3xl font-semibold text-gray-800'>{myInfoData.first_name + ' ' + myInfoData.last_name}</h2>
           <DataLine label='Email' value={myInfoData.email} />
           <DataLine label='Số điện thoại' value={myInfoData.phone_number} />
@@ -48,7 +80,10 @@ export const Profile = () => {
           <DataLine label='Giới tính' value={displayGender(myInfoData.gender)} />
           <DataLine label='Ngày sinh' value={formatDate(myInfoData.date_of_birth, 'dmy')} />
           <DataLine label='Vai trò' value={displayRole(myInfoData.role)} />
-          
+          <DataLine 
+            label='Địa chỉ nơi làm việc'
+            value={`${myInfoData.workplace_additional_address}, ${communeData.name}, ${districtData.name}, ${provinceData.name}`}
+          />
           <div className='flex space-x-4'>
             <ActionButton 
               mode='edit' 

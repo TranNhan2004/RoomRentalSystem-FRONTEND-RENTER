@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { handleInputChange } from '@/lib/client/handleInputChange';
 import { getMyInfo, setMyInfo } from '@/lib/client/authToken';
@@ -13,34 +13,69 @@ import { Validators } from '@/types/Validators.type';
 import { DataForm } from '@/components/partial/data/DataForm';
 import { Label } from '@/components/partial/form/Label';
 import { Input } from '@/components/partial/form/Input';
-import { Select } from '@/components/partial/form/Select';
+import { OptionType, Select } from '@/components/partial/form/Select';
 import { dateStrOfMaxAge, dateStrOfMinAge } from '@/lib/client/dateLimit';
 import { AxiosError } from 'axios';
 import { GeneralMessage } from '@/messages/General.message';
 import { formatDate } from '@/lib/client/format';
 import { CITIZEN_NUMBER_REG_EXP, EMAIL_REG_EXP, PHONE_NUMBER_REG_EXP } from '@/lib/client/isValidForm';
+import { mapOptions } from '@/lib/client/handleOptions';
+import { communeService, districtService, provinceService } from '@/services/Address.service';
+import { CommuneType, DistrictType } from '@/types/Address.type';
+import { Loading } from '@/components/partial/data/Loading';
 
-const EditInfo = () => {
+export const EditInfo = () => {
   const router = useRouter();
   const [reqData, setReqData] = useState<UserType>(INITIAL_USER);
-
-  const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    return handleInputChange(e, setReqData);
-  };
+  const [loading, setLoading] = useState(true);
+  const [provinceOptions, setProvinceOptions] = useState<OptionType[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<OptionType[]>([]);
+  const [communeOptions, setCommuneOptions] = useState<OptionType[]>([]);
+  const originalDistrictDataRef = useRef<DistrictType[]>([]);
+  const originalCommuneDataRef = useRef<CommuneType[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
+        const [provinceData, districtData, communeData] = await Promise.all([
+          provinceService.getMany(),
+          districtService.getMany(),
+          communeService.getMany(),
+        ]);
+  
+        setProvinceOptions(mapOptions(provinceData, ['name'], 'id'));
+        setDistrictOptions(mapOptions(districtData, ['name'], 'id'));
+        setCommuneOptions(mapOptions(communeData, ['name'], 'id'));
+        originalDistrictDataRef.current = districtData;
+        originalCommuneDataRef.current = communeData;
+  
         const data = await getMyInfo();
-        setReqData(data);
+
+        const commune = communeData.find(item => item.id === data.workplace_commune);
+        const district = districtData.find(item => item.id === commune?.district);
+        const province = provinceData.find(item => item.id === district?.province);
+
+        setReqData({ 
+          ...data, 
+          _workplace_district: district?.id,
+          _workplace_province: province?.id
+        });
 
       } catch {
         await toastError(UserMessage.GET_ERROR);
+
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
   }, []);
+
+  const handleInputOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    return handleInputChange(e, setReqData);
+  };
 
   const handlePatchError = async (error: unknown) => {
     if (!(error instanceof AxiosError)) {
@@ -159,12 +194,80 @@ const EditInfo = () => {
         return UserMessage.GENDER_REQUIRED;
       }
       return null;
+    },
+
+    _workplace_province: () => {
+      if (!reqData._workplace_province) {
+        return UserMessage.WORKPLACE_PROVINCE_REQUIRED;
+      }
+      return null;
+    },
+    
+    _workplace_district: () => {
+      if (!reqData._workplace_district) {
+        return UserMessage.WORKPLACE_DISTRICT_REQUIRED;
+      }
+      return null;
+    },
+
+    workplace_commune: () => {
+      if (!reqData.workplace_commune) {
+        return UserMessage.WORKPLACE_COMMUNE_REQUIRED;
+      }
+      return null;
+    },
+
+    workplace_additional_address: () => {
+      if (!reqData.workplace_additional_address) {
+        return UserMessage.WORKPLACE_ADDITIONAL_ADDRESS_REQUIRED;
+      }
+      return null;
     }
   };
 
   const handleGenderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setReqData({ ...reqData, gender: e.target.value as UserType['gender'] });
   };
+
+  const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setReqData({...reqData, _workplace_province: e.target.value });
+
+    if (e.target.value == '') {
+      setDistrictOptions(mapOptions(originalDistrictDataRef.current, ['name'], 'id'));
+      setCommuneOptions(mapOptions(originalCommuneDataRef.current, ['name'], 'id'));
+    } else {
+      const districts = originalDistrictDataRef.current.filter(
+        district => district.province === e.target.value
+      );
+      setDistrictOptions(mapOptions(districts, ['name'], 'id'));
+
+      const communesArray = districts.map(district => originalCommuneDataRef.current.filter(
+        commune => commune.district === district.id
+      ));
+      setCommuneOptions(mapOptions(communesArray.flat(), ['name'], 'id'));
+    }
+  };
+  
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setReqData({...reqData, _workplace_district: e.target.value });
+
+    if (e.target.value == '') {
+      setCommuneOptions(mapOptions(originalCommuneDataRef.current, ['name'], 'id'));
+    } else {
+      const communes = originalCommuneDataRef.current.filter(
+        commune => commune.district === e.target.value
+      );
+      setCommuneOptions(mapOptions(communes, ['name'], 'id'));
+    }
+  };
+
+  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setReqData({ ...reqData, workplace_commune: e.target.value });
+  };
+
+  if (loading) {
+    return <Loading />;
+  }
 
   return (
     <DataForm
@@ -252,6 +355,7 @@ const EditInfo = () => {
           className='w-[300px] ml-[-300px]'
           onChange={handleGenderChange}
           validate={validators.gender}
+          notUseEmptyValue
         />
       </div>
 
@@ -268,10 +372,62 @@ const EditInfo = () => {
           max={dateStrOfMinAge}
         />
       </div>
-      
 
+
+      <div>
+        <p className='text-gray-800 text-base font-bold'>
+          Địa chỉ nơi làm việc
+        </p>
+      </div> 
+      
+      <div className='grid grid-cols-2 items-center'>
+        <Label htmlFor='workplace-province' required>Tỉnh/Thành phố: </Label>
+        <Select 
+          id='workplace-province'
+          value={reqData._workplace_province}
+          options={provinceOptions}
+          className='w-[300px] ml-[-300px]'
+          onChange={handleProvinceChange}
+          validate={validators._workplace_province}
+        />
+      </div>
+
+      <div className='grid grid-cols-2 items-center'>
+        <Label htmlFor='workplace-district' required>Huyện/Quận/Thị xã: </Label>
+        <Select 
+          id='-workplace-district'
+          value={reqData._workplace_district}
+          options={districtOptions}
+          className='w-[300px] ml-[-300px]'
+          onChange={handleDistrictChange}
+          validate={validators._workplace_district}
+        />
+      </div>
+
+      <div className='grid grid-cols-2 items-center'>
+        <Label htmlFor='workplace-commune' required>Xã/Phường/Thị trấn: </Label>
+        <Select 
+          id='workplace-commune'
+          value={reqData.workplace_commune}
+          options={communeOptions}
+          className='w-[300px] ml-[-300px]'
+          onChange={handleCommuneChange}
+          validate={validators.workplace_commune}
+        />
+      </div>
+
+      <div className='grid grid-cols-2 items-center'>
+        <Label htmlFor='workplace-additional-address' required>Địa chỉ cụ thể: </Label>
+        <Input 
+          id='workplace-additional-address'
+          name='workplace_additional_address'
+          type='text'
+          className='w-[300px] ml-[-300px]'
+          value={reqData.workplace_additional_address}
+          onChange={handleInputOnChange}
+          validate={validators.workplace_additional_address}
+        />
+      </div>
     </DataForm>
   );
 };
-
-export default EditInfo;

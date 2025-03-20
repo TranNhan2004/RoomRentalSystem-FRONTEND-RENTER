@@ -27,6 +27,9 @@ import { saveForLaterService } from '@/services/SaveForLater.service';
 import { handleCancelAlert, toastError, toastSuccess } from '@/lib/client/alert';
 import { SaveForLaterMessage } from '@/messages/SaveForLater.message';
 import { AxiosError } from 'axios';
+import { DistanceType } from '@/types/Distance.type';
+import { INITIAL_DISTANCE } from '@/initials/Distance.initial';
+import { distanceService } from '@/services/Distance.service';
 
 type RentalRoomDetailsProps = {
   id: string;
@@ -35,6 +38,7 @@ type RentalRoomDetailsProps = {
 export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
   const router = useRouter();
   const [data, setData] = useState<RentalRoomType>(INITIAL_RENTAL_ROOM);
+  const [distanceData, setDistanceData] = useState<DistanceType>(INITIAL_DISTANCE);
   const [chargesData, setChargesData] = useState<ChargesType>(INITIAL_CHARGES);
   const [provinceData, setProvinceData] = useState<ProvinceType>(INITIAL_PROVINCE);
   const [districtData, setDistrictData] = useState<DistrictType>(INITIAL_DISTRICT);
@@ -56,9 +60,10 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
         const districtData = await districtService.get(communeData.district ?? '');
         const provinceData = await provinceService.get(districtData.province?? '');
         
-        const [chargesData, saveForLaterData] = await Promise.all([
+        const [chargesData, saveForLaterData, distanceData] = await Promise.all([
           chargesService.getMany({ rental_room: props.id, first_only: true }),
-          saveForLaterService.getMany({ rental_room: props.id, renter: myIdRef.current })
+          saveForLaterService.getMany({ rental_room: props.id, renter: myIdRef.current }),
+          distanceService.getMany({ rental_room: props.id, renter: myIdRef.current })
         ]);
 
         setData(data);
@@ -72,6 +77,10 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
         
         if (saveForLaterData.length > 0) {
           setHasSaveForLaterData(true);
+        }
+
+        if (distanceData.length > 0) {
+          setDistanceData(distanceData[0]);
         }
         
       } catch {
@@ -163,6 +172,10 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
                   <span className='ml-2 text-gray-800'>{round(data.average_rating, 1)}/5</span>
                 </div>
                 <DataLine label='Mô tả' value={data.further_description || 'Không có mô tả'} />
+                <DataLine 
+                  label='Khoảng cách' 
+                  value={`${round(distanceData.value, 1).toString().replace('.', ',')} km`} 
+                />
               </div>
             </div>
             <div className='mt-2 ml-5 flex items-center space-x-4'>

@@ -38,6 +38,8 @@ export type UserType = {
   date_of_birth?: Date;
   gender?: 'MALE' | 'FEMALE' | 'UNKNOWN' | '';
   role?: 'MANAGER' | 'LESSOR' | 'RENTER' | '';
+  _workplace_province?: ProvinceType['id'];
+  _workplace_district?: DistrictType['id'];
   workplace_commune?: string;
   workplace_additional_address?: string;
   is_active?: boolean;
@@ -48,8 +50,6 @@ export type UserType = {
 
 export type RegisterUserType = {
   confirm_password?: UserType['password'];
-  _workplace_province?: ProvinceType['id'];
-  _workplace_district?: DistrictType['id'];
 } & Omit<UserType, 
 'id' 
 | 'last_login' 

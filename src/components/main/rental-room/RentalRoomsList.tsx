@@ -153,7 +153,7 @@ export const RentalRoomsList = () => {
         const communes = communesArray.flat();
         
         const dataArray = await Promise.all(communes.map(
-          commune => rentalRoomService.getMany({ ...query, commune: commune.id })
+          commune => rentalRoomService.getMany({ ...query, commune: commune.id, manager_is_null: false })
         ));
 
         const data = dataArray.flat();
@@ -163,14 +163,14 @@ export const RentalRoomsList = () => {
       } else if (query._district !== '' && query.commune === '') {
         const communes = await communeService.getMany({ district: query._district });
         const dataArray = await Promise.all(communes.map(
-          commune => rentalRoomService.getMany({ ...query, commune: commune.id })
+          commune => rentalRoomService.getMany({ ...query, commune: commune.id, manager_is_null: false })
         ));
         const data = dataArray.flat();
         originalDataRef.current = await fetchRelatedData(data);
         setData([...originalDataRef.current]);
 
       } else {
-        const data = await rentalRoomService.getMany(query);
+        const data = await rentalRoomService.getMany({ ...query, manager_is_null: false });
         originalDataRef.current = await fetchRelatedData(data);
         setData([...originalDataRef.current]);
       }
@@ -187,7 +187,7 @@ export const RentalRoomsList = () => {
     setQuery(INITIAL_RENTAL_ROOM_QUERY);
   };
 
-  const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleProvinceQueryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setQuery({ ...query, _province: e.target.value });
     if (e.target.value === '') {
       setDistrictOptions(mapOptions(originalDistrictDataRef.current, ['name'], 'id'));
@@ -197,7 +197,7 @@ export const RentalRoomsList = () => {
     }
   };
 
-  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleDistrictQueryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setQuery({ ...query, _district: e.target.value });
     if (e.target.value === '') {
       setCommuneOptions(mapOptions(originalCommuneDataRef.current, ['name'], 'id'));
@@ -207,8 +207,16 @@ export const RentalRoomsList = () => {
     }
   };
 
-  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleCommuneQueryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setQuery({ ...query, commune: e.target.value });
+  };
+
+  const handleRoomChargeQueryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setQuery({ ...query, _room_charge_range: e.target.value });
+  };
+
+  const handleEmptyModeQueryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setQuery({ ...query, _empty_mode: e.target.value });
   };
 
   const handleViewModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -232,13 +240,17 @@ export const RentalRoomsList = () => {
           />
         </div>
 
-        <div className='ml-[10px]'>
+        <div className='ml-[5px]'>
           <Sorting
             options={[
               { label: 'Tên phòng trọ (A-Z)', value: 'asc-name' },
               { label: 'Tên phòng trọ (Z-A)', value: 'desc-name' },
               { label: 'Mới nhất', value: 'desc-created_at' },
               { label: 'Cũ nhất', value: 'asc-created_at' },
+              { label: 'Khoảng cách tăng dần', value: 'asc-_distance_value'},
+              { label: 'Khoảng cách giảm dần', value: 'desc-_distance_value'},
+              { label: 'Giá phòng tăng dần', value: 'asc-_room_charge'},
+              { label: 'Giá phòng giảm dần', value: 'desc-_room_charge'},
             ]}
             originalData={originalDataRef.current}
             data={data}
@@ -246,7 +258,7 @@ export const RentalRoomsList = () => {
           />
         </div>
 
-        <div className='ml-[80px] flex items-center space-x-4'>
+        <div className='ml-[70px] flex items-center space-x-4'>
           <Label htmlFor='view-mode'><p className='font-semibold'>Chế độ xem:</p></Label>
           <Select
             id='view-mode'
@@ -267,54 +279,72 @@ export const RentalRoomsList = () => {
             disabled={viewMode === 'recommend'}
           >
             <div className='grid grid-cols-2 items-center mt-1 mb-1'>
-              <Label htmlFor='province-query'>Tỉnh: </Label>
+              <Label htmlFor='province-query'>Tỉnh/Thành phố: </Label>
               <Select
                 id='province-query'
                 value={query._province}
                 className='ml-[-200px] w-[300px]'
                 options={provinceOptions}
-                onChange={handleProvinceChange}
+                onChange={handleProvinceQueryChange}
               />
             </div>    
 
             <div className='grid grid-cols-2 items-center mt-1 mb-1'>
-              <Label htmlFor='district-query'>Huyện: </Label>
+              <Label htmlFor='district-query'>Huyện/Quận/Thị xã: </Label>
               <Select
                 id='district-query'
                 value={query._district}
                 className='ml-[-200px] w-[300px]'
                 options={districtOptions}
-                onChange={handleDistrictChange}
+                onChange={handleDistrictQueryChange}
               />
             </div> 
 
             <div className='grid grid-cols-2 items-center mt-1 mb-1'>
-              <Label htmlFor='commune-query'>Xã: </Label>
+              <Label htmlFor='commune-query'>Xã/Phường/Thị trấn: </Label>
               <Select
                 id='commune-query'
                 value={query.commune}
                 className='ml-[-200px] w-[300px]'
                 options={communeOptions}
-                onChange={handleCommuneChange}
+                onChange={handleCommuneQueryChange}
               />
             </div> 
 
-            {/* <div className='grid grid-cols-2 items-center mt-1 mb-1'>
-              <Label htmlFor='status-query'>Trạng thái: </Label>
+            <div className='grid grid-cols-2 items-center mt-1 mb-1'>
+              <Label htmlFor='-empty-mode-query'>Trạng thái: </Label>
               <Select
-                id='status-query'
+                id='-empty-mode-query'
                 className='ml-[-200px] w-[300px]'
-                value={
-                  query.manager_is_null === true ? 'pending' : 
-                  query.manager_is_null === false ? 'approved' : ''
-                }
+                value={query._empty_mode}
                 options={[
-                  { label: 'Đã được duyệt', value: 'approved' },
-                  { label: 'Chưa được duyệt', value: 'pending' },
+                  { label: 'Phòng trống hoàn toàn', value: 'complete' },
+                  { label: 'Phòng có thể ở ghép', value: 'shared' },
+                  { label: 'Phòng không trống', value: 'unavailable' },
                 ]}
-                onChange={handleStatusChange}
+                onChange={handleEmptyModeQueryChange}
               />
-            </div>   */}
+            </div>
+
+            <div className='grid grid-cols-2 items-center mt-1 mb-1'>
+              <Label htmlFor='-room-charge-query'>Giá phòng: </Label>
+              <Select
+                id='-room-charge-query'
+                className='ml-[-200px] w-[300px]'
+                value={query._room_charge_range}
+                options={[
+                  { label: 'Từ 1 triệu trở xuống', value: '0-1' },
+                  { label: 'Từ 1 triệu đến 1,2 triệu', value: '1-1.2' },
+                  { label: 'Từ 1,2 triệu đến 1,5 triệu', value: '1.2-1.5' },
+                  { label: 'Từ 1,5 triệu đến 1,7 triệu', value: '1.5-1.7' },
+                  { label: 'Từ 1,7 triệu đến 2 triệu', value: '1.7-2' },
+                  { label: 'Từ 2 triệu đến 2,5 triệu', value: '2-2.5' },
+                  { label: 'Từ 2,5 triệu đến 3 triệu', value: '2.5-3' },
+                  { label: 'Từ 3 triệu trở lên', value: '3-inf' },
+                ]}
+                onChange={handleRoomChargeQueryChange}
+              />
+            </div>   
           </FilterModal>
         </div>
       </Taskbar>

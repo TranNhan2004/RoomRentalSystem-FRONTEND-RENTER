@@ -22,6 +22,8 @@ export type RentalRoomQueryType = {
   commune?: RentalRoomType['commune'];
   lessor?: RentalRoomType['lessor'];
   manager_is_null?: boolean;
+  _room_charge_range?: string;
+  _empty_mode?: string;
   _province?: ProvinceType['id'];
   _district?: DistrictType['id'];
 };
