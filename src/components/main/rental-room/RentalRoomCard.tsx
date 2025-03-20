@@ -6,7 +6,7 @@ import { RentalRoomType, RoomImageType, ChargesType } from '@/types/RentalRoom.t
 import { RatingStar } from '@/components/partial/data/RatingStar';
 import { ActionButton } from '@/components/partial/button/ActionButton';
 import { getImageSrc } from '@/lib/client/getImageSrc';
-import { formatCurrency } from '@/lib/client/format';
+import { formatCurrency, round } from '@/lib/client/format';
 
 type RentalRoomCardProps = {
   id: RentalRoomType['id'];
@@ -42,7 +42,7 @@ export const RentalRoomCard = (props: RentalRoomCardProps) => {
         <div className="flex items-center mb-5">
           <RatingStar value={props.averageRating ?? 0} />
           <span className="ml-2 text-gray-600 text-sm">
-            {`${props.averageRating}/5`}
+            {`${round(props.averageRating, 1)}/5`}
           </span>
         </div>
         

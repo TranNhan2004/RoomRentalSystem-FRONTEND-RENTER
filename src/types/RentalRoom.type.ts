@@ -1,5 +1,4 @@
 import { DistrictType, ProvinceType } from "./Address.type";
-import { UserType } from "./UserAccount.type";
 
 export type RentalRoomType = {
   id?: string;
@@ -69,9 +68,8 @@ export type MonitoringRentalType = {
   id?: string;
   room_code?: string;
   renter?: string;
-  _renter_first_name?: UserType['first_name'];
-  _renter_last_name?: UserType['last_name'];
-  _renter_phone_number?: UserType['phone_number'];
+  _room_name?: RentalRoomType['name'];
+  _room_code_obj?: RoomCodeType;
   start_date?: Date;
   end_date?: Date;
 }

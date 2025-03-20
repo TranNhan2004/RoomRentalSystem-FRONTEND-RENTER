@@ -15,7 +15,10 @@ import {
   XCircleIcon, 
   LockClosedIcon,
   ArrowLeftEndOnRectangleIcon,
-  UserPlusIcon
+  UserPlusIcon,
+  ArrowTopRightOnSquareIcon,
+  ShareIcon,
+  StopCircleIcon
 } from '@heroicons/react/24/outline';
 
 const colorVariants = {
@@ -83,6 +86,18 @@ const buttonConfig = {
   register: {
     icon: <UserPlusIcon className='w-5 h-5' />,
     color: 'green'
+  },
+  redirect: {
+    icon: <ArrowTopRightOnSquareIcon className='w-5 h-5' />,
+    color: 'blue'
+  },
+  share: {
+    icon: <ShareIcon className='w-5 h-5' />,
+    color: 'blue'
+  },
+  stopShare: {
+    icon: <StopCircleIcon className='w-5 h-5' />,
+    color: 'red'
   }
 } as const;
 

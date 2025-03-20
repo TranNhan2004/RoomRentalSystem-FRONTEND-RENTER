@@ -1,3 +1,4 @@
+import { MonitoringRentalsList } from "@/components/main/rental-room/monitoring-rental/MonitoringRentalsList";
 import { Metadata } from "next";
                                   
 export const metadata: Metadata = {
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
 export default function MonitoringRentalsListPage() {
   return (
     <>
-      Monitoring Rentals Page
+      <MonitoringRentalsList />
     </>
   );
 };

@@ -1,3 +1,4 @@
+import { SaveForLaterList } from "@/components/main/save-for-later/SaveForLaterList";
 import { Metadata } from "next";
                                   
 export const metadata: Metadata = {
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
 export default function SaveForLaterListPage() {
   return (
     <>
-      Save For Later Page
+      <SaveForLaterList />
     </>
   );
 };

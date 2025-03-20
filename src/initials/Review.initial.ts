@@ -1,6 +1,6 @@
 import { ReviewQueryType, ReviewType } from "@/types/Review.type";
 
-export const INITIAL_CHARGES_LIST: ReviewType = {
+export const INITIAL_REVIEW: ReviewType = {
   id: '',
   comment: '',
   rating: 0,

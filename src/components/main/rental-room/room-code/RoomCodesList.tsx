@@ -19,9 +19,10 @@ type RoomCodesListProps = {
 export const RoomCodesList = (props: RoomCodesListProps) => {
   const originalDataRef = useRef<RoomCodeType[]>([]);
   const [data, setData] = useState<RoomCodeType[]>([]);
+  const [displayedData, setDisplayedData] = useState<RoomCodeType[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-
+  
   const cardsPerPage = 20;
 
   useEffect(() => {
@@ -43,13 +44,17 @@ export const RoomCodesList = (props: RoomCodesListProps) => {
     fetchData();
   }, [props.roomId]);
 
+  useEffect(() => {
+    setDisplayedData([...data.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage)]);
+  }, [data, currentPage]);
+
   const onPageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
   };
 
   return (
     <div>
-      <Title>Danh sách các mã phòng</Title>
+      <Title>Các mã phòng</Title>
       <div className='flex items-center'>
         <div className='w-[40%]'>
           <InputSearch 
@@ -76,7 +81,9 @@ export const RoomCodesList = (props: RoomCodesListProps) => {
 
       {
         loading ? (
-          <Loading textSize={12} />
+          <div className='mt-5'>
+            <Loading textSize={12} />
+          </div>
         ) : (
           <>  
             <div className='mt-8 flex items-center space-x-6'>
@@ -94,17 +101,14 @@ export const RoomCodesList = (props: RoomCodesListProps) => {
                 <p>&nbsp; - Phòng không trống hoặc không thể ở ghép</p>
               </div>
             </div>
-            <div className='grid grid-cols-4 gap-4 mt-5 mb-8'>
+            <div className='grid grid-cols-6 gap-4 mt-5 mb-8'>
               {
-                data.length === 0 
+                displayedData.length === 0 
                   ? 'Không có dữ liệu' 
-                  : data.map((item, index) => (
+                  : displayedData.map((item) => (
                     <RoomCodeCard
-                      key={index}
-                      value={item.value}
-                      maxOccupancy={item.max_occupancy}
-                      currentOccupancy={item.current_occupancy}
-                      isShared={item.is_shared}
+                      key={item.id}
+                      item={item}
                     />
                   )) 
               }

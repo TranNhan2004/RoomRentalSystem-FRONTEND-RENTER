@@ -4,6 +4,7 @@ import React from 'react';
 
 type LoadingProps = {
   textSize?: number;
+  useOnlyDot?: boolean;
 }
 
 export const Loading = (props: LoadingProps) => {
@@ -14,7 +15,7 @@ export const Loading = (props: LoadingProps) => {
         fontSize: `${props.textSize ?? 20}pt`,
       }}
     >
-      <p>Đang tải dữ liệu</p>
+      {!props.useOnlyDot && <p>Đang tải dữ liệu</p>}
       <span className="dot animate-bounce1">.</span>
       <span className="dot animate-bounce2">.</span>
       <span className="dot animate-bounce3">.</span>

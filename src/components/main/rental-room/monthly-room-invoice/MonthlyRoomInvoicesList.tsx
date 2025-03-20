@@ -1,49 +1,60 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { handleDeleteAlert, handleGeneralAlert, toastError, toastSuccess } from '@/lib/client/alert';
-import { DisplayedDataType, Table } from '@/components/partial/data/Table';
 import { useRouter } from 'next/navigation';
-import { ActionButton } from '@/components/partial/button/ActionButton';
-import { Title } from '@/components/partial/data/Title';
-import { InputSearch } from '@/components/partial/data/InputSearch';
 import { Sorting } from '@/components/partial/data/Sorting';
-import { AxiosError } from 'axios';
-import { GeneralMessage } from '@/messages/General.message';
 import { FilterModal } from '@/components/partial/data/FilterModal';
 import { Label } from '@/components/partial/form/Label';
-import { MonthlyRoomInvoiceQueryType, MonthlyRoomInvoiceType } from '@/types/RentalRoom.type';
-import { INITIAL_MONTHLY_ROOM_INVOICE_QUERY } from '@/initials/RentalRoom.initial';
-import { monthlyRoomInvoiceService } from '@/services/RentalRoom.service';
+import { MonitoringRentalType, MonthlyRoomInvoiceQueryType, MonthlyRoomInvoiceType } from '@/types/RentalRoom.type';
+import { INITIAL_MONITORING_RENTAL, INITIAL_MONTHLY_ROOM_INVOICE_QUERY } from '@/initials/RentalRoom.initial';
+import { monitoringRentalService, monthlyRoomInvoiceService } from '@/services/RentalRoom.service';
 import { MonthlyRoomInvoiceMessage } from '@/messages/RentalRoom.message';
-import { DataLine } from '@/components/partial/data/DataLine';
 import { handleInputChange } from '@/lib/client/handleInputChange';
 import { Input } from '@/components/partial/form/Input';
 import { Validators } from '@/types/Validators.type';
-import { formatCurrency, formatDate } from '@/lib/client/format';
+import { formatDate } from '@/lib/client/format';
 import { Select } from '@/components/partial/form/Select';
+import { Loading } from '@/components/partial/data/Loading';
+import { MonthlyRoomInvoiceCard } from './MonthlyRoomInvoiceCard';
+import { PaginationNav } from '@/components/partial/data/PaginationNav';
+import { toastError } from '@/lib/client/alert';
+import { maxStr, minStr } from '@/lib/client/stringLimit';
 
                           
-type MonthlyRoomInvoiceListProps = {
-  roomCodeId: string;
+type MonthlyRoomInvoicesListProps = {
+  monitoringRentalId: string;
 }
 
-export const MonthlyRoomInvoiceList = (props: MonthlyRoomInvoiceListProps) => {
+export const MonthlyRoomInvoicesList = (props: MonthlyRoomInvoicesListProps) => {
   const router = useRouter();
   
   const [data, setData] = useState<MonthlyRoomInvoiceType[]>([]);
+  const [displayedData, setDisplayedData] = useState<MonthlyRoomInvoiceType[]>([]);
   const [query, setQuery] = useState<MonthlyRoomInvoiceQueryType>(INITIAL_MONTHLY_ROOM_INVOICE_QUERY);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   
-  const originialDataRef = useRef<MonthlyRoomInvoiceType[]>([]);
+  const originalDataRef = useRef<MonthlyRoomInvoiceType[]>([]);
+  const monitoringRentalDataRef = useRef<MonitoringRentalType>(INITIAL_MONITORING_RENTAL);
+
+  const cardsPerPage = 20;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await monthlyRoomInvoiceService.getMany({ room_code: props.roomCodeId });
-        originialDataRef.current = data;
-        setData([...originialDataRef.current]);
+        const monitoringRentalData = await monitoringRentalService.get(props.monitoringRentalId);
+        const data = await monthlyRoomInvoiceService.getMany({
+          room_code: monitoringRentalData.room_code,
+          from_created_date: formatDate(monitoringRentalData.start_date as Date, 'ymd'),
+          to_created_date: monitoringRentalData.end_date ? 
+                            formatDate(monitoringRentalData.end_date as Date, 'ymd') :
+                            undefined
+        });
+      
+        monitoringRentalDataRef.current = monitoringRentalData;
+        originalDataRef.current = data;
+        setData([...originalDataRef.current]);
 
       } catch {
         await toastError(MonthlyRoomInvoiceMessage.GET_MANY_ERROR);
@@ -54,91 +65,14 @@ export const MonthlyRoomInvoiceList = (props: MonthlyRoomInvoiceListProps) => {
     };
 
     fetchData();
-  }, [props.roomCodeId]);
+  }, [props.monitoringRentalId]);
 
-  const generateDataForTable = (): DisplayedDataType[] => {
-    return data.map((item) => ({
-      id: `${item.id}`,
-      basicInfo: (
-        <>
-          <DataLine label='Số tiền phải trả' value={formatCurrency(item.due_charge)} />
-          <DataLine label='Số tiền đã trả' value={formatCurrency(item.paid_charge)} />
-          <DataLine label='Ngày tạo' value={formatDate(item.created_at, 'dmy')} />
-          <DataLine 
-            label='Trạng thái' 
-            value={item.is_settled ? 'Đã kết toán' : 'Chưa kết toán'} 
-          />
-        </>
-      ),
-    }));
-  };
+  useEffect(() => {
+    setDisplayedData([...data.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage)]);
+  }, [data, currentPage]);
 
-  const handleDeleteError = async (error: unknown) => {
-    if (!(error instanceof AxiosError)) {
-      await toastError(GeneralMessage.UNKNOWN_ERROR);
-      return;
-    }
-
-    await toastError(MonthlyRoomInvoiceMessage.DELETE_ERROR);
-  };
-
-  const deleteFunction = async (id: string) => {
-    await handleDeleteAlert(async () => {
-      try {
-        await monthlyRoomInvoiceService.delete(id);
-        await toastSuccess(MonthlyRoomInvoiceMessage.DELETE_SUCCESS);
-        originialDataRef.current = originialDataRef.current.filter(item => item.id !== id);
-        setData(originialDataRef.current); 
-      
-      } catch (error) {
-        await handleDeleteError(error);
-      }
-    });
-  };
-
-  const deleteDisabledFunction = (id: string) => {
-    return !data.find(item => item.id === id)?.is_settled;
-  };
-  
-  const settleFunction = async (id: string) => {
-    const confirmedMethod = async () => {
-      try {
-        await monthlyRoomInvoiceService.patch(id, { is_settled: true });
-        await toastSuccess(MonthlyRoomInvoiceMessage.SETTLE_SUCCESS);
-      
-        const data = originialDataRef.current.find(data => data.id === id);
-        if (data && !data.is_settled) {  
-          data.is_settled = true;
-          setData([...originialDataRef.current]);  
-        }
-      
-      } catch {
-        await toastError(MonthlyRoomInvoiceMessage.SETTLE_ERROR);
-      }
-    };
-
-    await handleGeneralAlert(MonthlyRoomInvoiceMessage.SETTLE_WARNING, confirmedMethod);
-  };
-
-  const settleDisabledFunction = (id: string) => {
-    const item = data.find(item => item.id === id);
-    return item?.is_settled || item?.paid_charge === undefined;
-  };
-
-  const detailsFunction = (id: string) => {
-    router.push(`${props.roomCodeId}/monthly-room-invoices/${id}`);
-  };
-
-  const editFunction = (id: string) => {
-    router.push(`${props.roomCodeId}/monthly-room-invoices/${id}/edit`);
-  };
-
-  const editDisabledFunction = (id: string) => {
-    return data.find(item => item.id === id)?.is_settled;
-  };
-
-  const addOnClick = () => {
-    router.push(`${props.roomCodeId}/monthly-room-invoices/add`);
+  const onPageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
   };
 
   const filterOnClick = async () => {
@@ -146,12 +80,18 @@ export const MonthlyRoomInvoiceList = (props: MonthlyRoomInvoiceListProps) => {
       setLoading(true);
       const data = await monthlyRoomInvoiceService.getMany({
         ...query, 
-        room_code: props.roomCodeId,
-        from_created_date: formatDate(query.from_created_date as Date, 'ymd'),
-        to_created_date: formatDate(query.to_created_date as Date, 'ymd'),
+        room_code: monitoringRentalDataRef.current.room_code,
+        from_created_date: minStr(
+          formatDate(monitoringRentalDataRef.current.start_date, 'ymd'),
+          formatDate(query.to_created_date as Date, 'ymd')
+        ),
+        to_created_date: monitoringRentalDataRef.current.end_date ? maxStr(
+          formatDate(monitoringRentalDataRef.current.end_date, 'ymd'),
+          formatDate(query.from_created_date as Date, 'ymd')
+        ) : formatDate(query.from_created_date as Date, 'ymd')
       });
 
-      originialDataRef.current = data;
+      originalDataRef.current = data;
       setData(data);
       
     } catch {
@@ -192,27 +132,24 @@ export const MonthlyRoomInvoiceList = (props: MonthlyRoomInvoiceListProps) => {
     }
   };
 
+  const redirectFunction = (id: string) => {
+    router.push(`monthly-room-invoices/${id}`);
+  };
+
+  if (loading) {
+    return <Loading />;
+  }
+
   return (
     <div>
-      <Title>Danh sách các hóa đơn hằng tháng</Title>
       <div className='flex items-center'>
-        <div className='w-[40%]'>
-          <InputSearch 
-            placeholder='Tìm kiếm theo số tiền phải trả, đã trả'
-            options={['due_charge', 'paid_charge']}
-            originalData={originialDataRef.current}
-            data={data}
-            setData={setData}
-          />
-        </div>
-
-        <div className='ml-[30px]'>
+        <div>
           <Sorting
             options={[
               { label: 'Mới nhất', value: 'desc-created_at' },
               { label: 'Cũ nhất', value: 'asc-created_at' },
             ]}
-            originalData={originialDataRef.current}
+            originalData={originalDataRef.current}
             data={data}
             setData={setData}
           />
@@ -266,40 +203,27 @@ export const MonthlyRoomInvoiceList = (props: MonthlyRoomInvoiceListProps) => {
             </div>   
           </FilterModal>
         </div>
-
-        <div className='ml-auto'>
-          <ActionButton mode='add' onClick={addOnClick}>Thêm mới</ActionButton>
-        </div>
       </div>
       
-      <Table 
-        data={generateDataForTable()}
-        loading={loading}
-        actions={[
-          {
-            rowName: 'Chi tiết', 
-            function: detailsFunction,
-            buttonConfig: { mode: 'details' },
-          },
-          {
-            rowName: 'Sửa', 
-            function: editFunction,
-            buttonConfig: { mode: 'edit' },
-            disabledFunction: editDisabledFunction,
-          },
-          {
-            rowName: 'Hoàn thành kết toán',
-            function: settleFunction,
-            buttonConfig: { mode: 'active' },
-            disabledFunction: settleDisabledFunction,
-          },
-          {
-            rowName: 'Xóa', 
-            function: deleteFunction,
-            buttonConfig: { mode: 'delete' },
-            disabledFunction: deleteDisabledFunction,
-          }
-        ]}
+      <div className='grid grid-cols-2 gap-4 mt-8 mb-8'>
+        {
+          displayedData.length === 0 
+            ? 'Không có dữ liệu' 
+            : displayedData.map((item, index) => (
+              <MonthlyRoomInvoiceCard
+                key={item.id}
+                ordinal={index + 1}
+                item={item}
+                redirectFunction={redirectFunction}
+              />
+            )) 
+        }
+      </div>
+      <PaginationNav
+        totalPages={Math.ceil(data.length / cardsPerPage)}
+        currentPage={currentPage}
+        onPageChange={onPageChange}
+        step={6}
       />
       
     </div>

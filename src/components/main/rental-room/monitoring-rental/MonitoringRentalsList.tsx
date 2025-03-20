@@ -1,73 +1,65 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { handleDeleteAlert, handleGeneralAlert, toastError, toastSuccess } from '@/lib/client/alert';
-import { DisplayedDataType, Table } from '@/components/partial/data/Table';
+import { toastError, toastSuccess } from '@/lib/client/alert';
 import { useRouter } from 'next/navigation';
-import { ActionButton } from '@/components/partial/button/ActionButton';
-import { Title } from '@/components/partial/data/Title';
-import { InputSearch } from '@/components/partial/data/InputSearch';
 import { Sorting } from '@/components/partial/data/Sorting';
-import { AxiosError } from 'axios';
-import { GeneralMessage } from '@/messages/General.message';
+import { MonitoringRentalQueryType, MonitoringRentalType } from '@/types/RentalRoom.type';
+import { monitoringRentalService, rentalRoomService, roomCodeService } from '@/services/RentalRoom.service';
+import { MonitoringRentalMessage, RoomCodeMessage } from '@/messages/RentalRoom.message';
+import { PaginationNav } from '@/components/partial/data/PaginationNav';
+import { MonitoringRentalCard } from './MonitoringRentalCard';
+import { Loading } from '@/components/partial/data/Loading';
+import { getMyInfo } from '@/lib/client/authToken';
+import { INITIAL_MONITORING_RENTAL_QUERY } from '@/initials/RentalRoom.initial';
+import { Validators } from '@/types/Validators.type';
+import { handleInputChange } from '@/lib/client/handleInputChange';
 import { FilterModal } from '@/components/partial/data/FilterModal';
 import { Label } from '@/components/partial/form/Label';
-import { MonitoringRentalQueryType, MonitoringRentalType } from '@/types/RentalRoom.type';
-import { INITIAL_MONITORING_RENTAL_QUERY } from '@/initials/RentalRoom.initial';
-import { monitoringRentalService } from '@/services/RentalRoom.service';
-import { MonitoringRentalMessage } from '@/messages/RentalRoom.message';
-import { DataLine } from '@/components/partial/data/DataLine';
-import { handleInputChange } from '@/lib/client/handleInputChange';
 import { Input } from '@/components/partial/form/Input';
-import { Validators } from '@/types/Validators.type';
 import { formatDate } from '@/lib/client/format';
-import { userService } from '@/services/UserAccount.service';
 
-                          
-type MonitoringRentalsListProps = {
-  roomCodeId: string;
-}
-
-export const MonitoringRentalsList = (props: MonitoringRentalsListProps) => {
+              
+export const MonitoringRentalsList = () => {
   const router = useRouter();
-  
+
+  const myIdRef = useRef<string | undefined>(undefined);
   const [data, setData] = useState<MonitoringRentalType[]>([]);
   const [query, setQuery] = useState<MonitoringRentalQueryType>(INITIAL_MONITORING_RENTAL_QUERY);
+  const [displayedData, setDisplayedData] = useState<MonitoringRentalType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+    
+  const cardsPerPage = 20;
   
-  const originialDataRef = useRef<MonitoringRentalType[]>([]);
+  const originalDataRef = useRef<MonitoringRentalType[]>([]);
 
   const fetchRelatedData = useCallback(async (data: MonitoringRentalType[]) => {
-    let newData = [...data];
-    await Promise.all(
-      data.map(async (item) => {
-        const renter = await userService.get(item.renter ?? '');
-        
-        newData = newData.map(thisItem => {
-          if (thisItem.id === item.id) {
-            return { 
-              ...thisItem,
-              _rental_first_name: renter.first_name,
-              _rental_last_name: renter.last_name,
-              _rental_phone_number: renter.phone_number,
-            };
-          }
-          return thisItem;
-        });  
-      })
-    );
+    const roomCodeData = await Promise.all(data.map(
+      item => roomCodeService.get(item.room_code ?? '')
+    ));
 
-    return newData;
+    const rentalRoomData = await Promise.all(roomCodeData.map(
+      item => rentalRoomService.get(item.rental_room ?? '')
+    ));
+
+    return data.map((item, index) => ({
+     ...item,
+      _room_code_obj: roomCodeData[index],
+      _room_name: rentalRoomData[index].name
+    }));
   }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await monitoringRentalService.getMany({ room_code: props.roomCodeId });
-        originialDataRef.current = await fetchRelatedData(data);
+        myIdRef.current = (await getMyInfo()).id;
+
+        const data = await monitoringRentalService.getMany({ renter: myIdRef.current });
+        originalDataRef.current = await fetchRelatedData(data);
         
-        setData([...originialDataRef.current]);
+        setData([...originalDataRef.current]);
 
       } catch {
         await toastError(MonitoringRentalMessage.GET_MANY_ERROR);
@@ -78,94 +70,24 @@ export const MonitoringRentalsList = (props: MonitoringRentalsListProps) => {
     };
 
     fetchData();
-  }, [props.roomCodeId, fetchRelatedData]);
+  }, [fetchRelatedData]);
 
-  const generateDataForTable = (): DisplayedDataType[] => {
-    return data.map((item) => ({
-      id: `${item.id}`,
-      basicInfo: (
-        <>
-          <DataLine label='Tên người thuê' value={item._renter_first_name + ' ' + item._renter_last_name} />
-          <DataLine label='Số điện thoại' value={item._renter_phone_number} />
-          <DataLine label='Ngày bắt đầu thuê' value={formatDate(item.start_date, 'dmy')} />
-          <DataLine 
-            label='Ngày kết thúc thuê' 
-            value={item.end_date ? formatDate(item.end_date, 'dmy') : 'Chưa xác định'} 
-          />
-        </>
-      ),
-    }));
-  };
-
-  const handleDeleteError = async (error: unknown) => {
-    if (!(error instanceof AxiosError)) {
-      await toastError(GeneralMessage.UNKNOWN_ERROR);
-      return;
-    }
-
-    await toastError(MonitoringRentalMessage.DELETE_ERROR);
-  };
-
-  const deleteFunction = async (id: string) => {
-    await handleDeleteAlert(async () => {
-      try {
-        await monitoringRentalService.delete(id);
-        await toastSuccess(MonitoringRentalMessage.DELETE_SUCCESS);
-        originialDataRef.current = originialDataRef.current.filter(item => item.id !== id);
-        setData(originialDataRef.current); 
-      
-      } catch (error) {
-        await handleDeleteError(error);
-      }
-    });
-  };
-
-  const deleteDisabledFunction = (id: string) => {
-    return !data.find(item => item.id === id)?.end_date;
-  };
-  
-  const stopRentFunction = async (id: string) => {
-    const confirmedMethod = async () => {
-      try {
-        const today = new Date(); 
-        await monitoringRentalService.patch(id, { end_date: today });
-        await toastSuccess(MonitoringRentalMessage.STOP_RENT_SUCCESS);
-      
-        const data = originialDataRef.current.find(data => data.id === id);
-        if (data && !data.end_date) {  
-          data.end_date = today;
-          setData([...originialDataRef.current]);  
-        }
-      
-      } catch {
-        await toastError(MonitoringRentalMessage.STOP_RENT_ERROR);
-      }
-    };
-
-    await handleGeneralAlert(MonitoringRentalMessage.STOP_RENT_WARNING, confirmedMethod);
-  };
-
-  const stopRentDisabledFunction = (id: string) => {
-    const item = data.find(item => item.id === id);
-    return !!item?.end_date || formatDate(item?.start_date, 'ymd') >= formatDate(new Date(), 'ymd');
-  };
-
-  const addOnClick = () => {
-    router.push(`${props.roomCodeId}/monitoring-rentals/add`);
-  };
+  useEffect(() => {
+    setDisplayedData([...data.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage)]);
+  }, [data, currentPage]);
 
   const filterOnClick = async () => {
     try {
       setLoading(true);
       const data = await monitoringRentalService.getMany({
         ...query, 
-        room_code: props.roomCodeId,
+        renter: myIdRef.current,
         from_date: formatDate(query.from_date as Date, 'ymd'),
         to_date: formatDate(query.to_date as Date, 'ymd'),
       });
 
-      originialDataRef.current = await fetchRelatedData(data);
-      setData([...originialDataRef.current]);
+      originalDataRef.current = await fetchRelatedData(data);
+      setData([...originalDataRef.current]);
       
     } catch {
       await toastError(MonitoringRentalMessage.GET_MANY_ERROR);
@@ -192,27 +114,64 @@ export const MonitoringRentalsList = (props: MonitoringRentalsListProps) => {
     handleInputChange(e, setQuery);
   };
 
+  const onPageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const redirectFunction = (id: string) => {
+    router.push(`/monitoring-rentals/${id}/monthly-room-invoices/`);
+  };
+
+  const shareRoomCodeFunction = async (roomCodeId: string) => {
+    try {
+      await roomCodeService.patch(roomCodeId, { is_shared: true });
+      await toastSuccess(RoomCodeMessage.SHARE_SUCCESS);
+      originalDataRef.current = originalDataRef.current.map(item => {
+        if (item._room_code_obj?.id === roomCodeId) {
+          return { ...item, _room_code_obj: { ...item._room_code_obj, is_shared: true } };
+        }
+
+        return item;
+      });
+      setData([...originalDataRef.current]);
+    
+    } catch {
+      await toastError(RoomCodeMessage.SHARE_ERROR);
+    }
+  };
+
+  const stopShareRoomCodeFunction = async (roomCodeId: string) => {
+    try {
+      await roomCodeService.patch(roomCodeId, { is_shared: false });
+      await toastSuccess(RoomCodeMessage.STOP_SHARE_SUCCESS);
+      originalDataRef.current = originalDataRef.current.map(item => {
+        if (item._room_code_obj?.id === roomCodeId) {
+          return { ...item, _room_code_obj: { ...item._room_code_obj, is_shared: false } };
+        }
+
+        return item;
+      });
+      setData([...originalDataRef.current]);
+    
+    } catch {
+      await toastError(RoomCodeMessage.STOP_SHARE_ERROR);
+    }
+  };
+
+  if (loading) {
+    return <Loading />;
+  }
+
   return (
     <div>
-      <Title>Danh sách các bản ghi theo dõi cho thuê</Title>
       <div className='flex items-center'>
-        <div className='w-[40%]'>
-          <InputSearch 
-            placeholder='Tìm kiếm theo họ tên, số điện thoại người thuê'
-            options={['_renter_first_name', '_renter_last_name', '_renter_phone_number']}
-            originalData={originialDataRef.current}
-            data={data}
-            setData={setData}
-          />
-        </div>
-
-        <div className='ml-[30px]'>
+        <div>
           <Sorting
             options={[
               { label: 'Mới nhất', value: 'desc-start_date' },
               { label: 'Cũ nhất', value: 'asc-start_date' },
             ]}
-            originalData={originialDataRef.current}
+            originalData={originalDataRef.current}
             data={data}
             setData={setData}
           />
@@ -249,32 +208,30 @@ export const MonitoringRentalsList = (props: MonitoringRentalsListProps) => {
             </div>    
           </FilterModal>
         </div>
-
-        <div className='ml-auto'>
-          <ActionButton mode='add' onClick={addOnClick}>Thêm mới</ActionButton>
-        </div>
       </div>
       
-      <Table 
-        data={generateDataForTable()}
-        loading={loading}
-        actions={[
-          {
-            rowName: 'Dừng thuê',
-            function: stopRentFunction,
-            buttonConfig: { mode: 'deactive' },
-            disabledFunction: stopRentDisabledFunction,
-          },
-          {
-            rowName: 'Xóa', 
-            function: deleteFunction,
-            buttonConfig: { mode: 'delete' },
-            disabledFunction: deleteDisabledFunction,
-          }
-        ]}
-        note='Lưu ý: Chỉ có thể dừng thuê sau ngày bắt đầu 1 ngày.'
-      />
-      
+      <div className='grid grid-cols-2 gap-4 mt-8 mb-8'>
+        {
+          displayedData.length === 0 
+            ? 'Không có dữ liệu' 
+            : displayedData.map((item, index) => (
+              <MonitoringRentalCard
+                key={item.id}
+                ordinal={index + 1}
+                item={item}
+                shareRoomCodeFunction={shareRoomCodeFunction}
+                stopShareRoomCodeFunction={stopShareRoomCodeFunction}
+                redirectFunction={redirectFunction}
+              />
+            )) 
+        }
+      </div>
+      <PaginationNav
+        totalPages={Math.ceil(data.length / cardsPerPage)}
+        currentPage={currentPage}
+        onPageChange={onPageChange}
+        step={6}
+      />      
     </div>
   );
 };

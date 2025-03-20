@@ -8,6 +8,7 @@ type FilterModalProps = {
   filterOnClick: () => void;
   refreshOnClick: () => void;
   children: React.ReactNode;
+  disabled?: boolean;
 }
 
 export const FilterModal = (props: FilterModalProps) => {
@@ -37,32 +38,33 @@ export const FilterModal = (props: FilterModalProps) => {
     <div>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="border border-gray-300 bg-white hover:bg-gray-100 p-2 rounded-lg 
-                    flex items-center justify-center"
+        className={`border border-gray-300 ${props.disabled ? 'cursor-not-allowed bg-gray-100' : 'bg-white hover:bg-gray-100'} 
+                    p-2 rounded-lg flex items-center justify-center`}
+        disabled={props.disabled}
       >
-        <FunnelIcon className="w-5 h-5 text-gray-600" />
+        <FunnelIcon className='w-5 h-5 text-gray-600' />
       </button>
 
       {
         isOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded-lg w-[60%] h-[80%] relative flex flex-col">
-              <h2 className="text-xl font-semibold mb-4">Lọc dữ liệu</h2>
+          <div className='fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50'>
+            <div className='bg-white p-6 rounded-lg w-[60%] h-[80%] relative flex flex-col'>
+              <h2 className='text-xl font-semibold mb-4'>Lọc dữ liệu</h2>
 
-              <div className="flex-1 overflow-y-auto max-h-[72%] pb-20 space-y-4">
+              <div className='flex-1 overflow-y-auto max-h-[72%] pb-20 space-y-4'>
                 {props.children}
               </div>
 
               <div className='absolute bottom-6 right-6 flex gap-4'>
-                <div className="mt-6">
+                <div className='mt-6'>
                   <ActionButton mode='filter' onClick={handleFilter}>Lọc</ActionButton>
                 </div>
 
-                <div className="mt-6">
+                <div className='mt-6'>
                   <ActionButton mode='refresh' onClick={props.refreshOnClick}>Làm mới</ActionButton>
                 </div>
 
-                <div className="mt-6">
+                <div className='mt-6'>
                   <ActionButton mode='cancel' onClick={handleCancel}>Thoát</ActionButton>
                 </div>
               </div>
