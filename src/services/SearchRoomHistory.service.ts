@@ -27,8 +27,6 @@ export const setSearchToLocalStorage = async (roomId: string, myId: string) => {
 
     localStorage.setItem('srh', await encryptValue(JSON.stringify(parsedSearchRoomHistory)));
 
-    alert(JSON.stringify(parsedSearchRoomHistory));
-
   } else {
     localStorage.setItem('srh', await encryptValue(
       JSON.stringify([{ rental_room: roomId, renter: myId, weight: 1 }])
