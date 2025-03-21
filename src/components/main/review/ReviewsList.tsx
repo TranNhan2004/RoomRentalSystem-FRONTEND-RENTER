@@ -319,6 +319,9 @@ export const ReviewsList = (props: ReviewsListProps) => {
             <div className='mt-20 mb-8'>
               {memoReviewCards}
             </div>
+            <div className='flex justify-end text-sm italic text-gray-500 mr-2'>
+              <p>Tổng cộng {data.length} đánh giá</p>
+            </div>
             <PaginationNav
               totalPages={Math.ceil(data.length / cardsPerPage)}
               currentPage={currentPage}

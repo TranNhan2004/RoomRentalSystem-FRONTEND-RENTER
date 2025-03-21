@@ -62,11 +62,11 @@ export const RentalRoomsList = () => {
     const chargesData = chargesDataArray.flat();
     const distanceData = distanceDataArray.flat();
 
-    return data.map(item => ({
+    return data.map((item, index) => ({
       ...item,
-      _image: imageData.length > 0 ? imageData[0].image : '',
-      _room_charge: chargesData.length > 0 ? chargesData[0].room_charge : -1,
-      _distance_value: distanceData.length > 0 ? distanceData[0].value : -1, 
+      _image: imageData[index]?.image ?? '',
+      _room_charge: chargesData[index]?.room_charge ?? -1,
+      _distance_value: distanceData[index]?.value ?? -1, 
     }));
   }, []);
 
@@ -368,6 +368,9 @@ export const RentalRoomsList = () => {
                 )) 
             }
           </div>
+        </div>
+        <div className='flex justify-end text-sm italic text-gray-500 mr-2'>
+          <p>Tổng cộng {data.length} phòng trọ</p>
         </div>
         <PaginationNav 
           totalPages={Math.ceil(data.length / cardsPerPage)}

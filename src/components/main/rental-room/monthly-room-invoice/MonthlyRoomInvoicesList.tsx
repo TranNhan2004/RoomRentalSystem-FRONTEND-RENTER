@@ -219,6 +219,9 @@ export const MonthlyRoomInvoicesList = (props: MonthlyRoomInvoicesListProps) => 
             )) 
         }
       </div>
+      <div className='flex justify-end text-sm italic text-gray-500 mr-2'>
+        <p>Tổng cộng {data.length} hóa đơn</p>
+      </div>
       <PaginationNav
         totalPages={Math.ceil(data.length / cardsPerPage)}
         currentPage={currentPage}

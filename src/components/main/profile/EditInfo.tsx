@@ -54,12 +54,11 @@ export const EditInfo = () => {
 
         const commune = communeData.find(item => item.id === data.workplace_commune);
         const district = districtData.find(item => item.id === commune?.district);
-        const province = provinceData.find(item => item.id === district?.province);
 
         setReqData({ 
           ...data, 
           _workplace_district: district?.id,
-          _workplace_province: province?.id
+          _workplace_province: district?.province,
         });
 
       } catch {
