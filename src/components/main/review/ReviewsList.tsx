@@ -319,7 +319,7 @@ export const ReviewsList = (props: ReviewsListProps) => {
             <div className='mt-20 mb-8'>
               {memoReviewCards}
             </div>
-            <div className='flex justify-end text-sm italic text-gray-500 mr-2'>
+            <div className='flex justify-end text-sm italic text-gray-500 mr-5 mt-5'>
               <p>Tổng cộng {data.length} đánh giá</p>
             </div>
             <PaginationNav

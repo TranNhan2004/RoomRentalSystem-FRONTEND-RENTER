@@ -10,7 +10,7 @@ import { Label } from '@/components/partial/form/Label';
 import { OptionType, Select } from '@/components/partial/form/Select';
 import { RentalRoomQueryType, RentalRoomType } from '@/types/RentalRoom.type';
 import { INITIAL_RENTAL_ROOM_QUERY } from '@/initials/RentalRoom.initial';
-import { chargesService, roomImageService, rentalRoomService } from '@/services/RentalRoom.service';
+import { rentalRoomService } from '@/services/RentalRoom.service';
 import { RentalRoomMessage } from '@/messages/RentalRoom.message';
 import { communeService, districtService, provinceService } from '@/services/Address.service';
 import { mapOptions } from '@/lib/client/handleOptions';
@@ -46,26 +46,14 @@ export const RentalRoomsList = () => {
   const cardsPerPage = 20;
 
   const fetchRelatedData = useCallback(async (data: RentalRoomType[]) => {
-    const imageDataArray = await Promise.all(data.map(
-      item => roomImageService.getMany({ rental_room: item.id, first_only: true })
-    ));
-  
-    const chargesDataArray = await Promise.all(data.map(
-      item => chargesService.getMany({ rental_room: item.id, first_only: true })
-    ));
-
     const distanceDataArray = await Promise.all(data.map(
       item => distanceService.getMany({ rental_room: item.id, renter: myIdRef.current })
     ));
 
-    const imageData = imageDataArray.flat();
-    const chargesData = chargesDataArray.flat();
     const distanceData = distanceDataArray.flat();
 
     return data.map((item, index) => ({
       ...item,
-      _image: imageData[index]?.image ?? '',
-      _room_charge: chargesData[index]?.room_charge ?? -1,
       _distance_value: distanceData[index]?.value ?? -1, 
     }));
   }, []);
@@ -369,7 +357,7 @@ export const RentalRoomsList = () => {
             }
           </div>
         </div>
-        <div className='flex justify-end text-sm italic text-gray-500 mr-2'>
+        <div className='flex justify-end text-sm italic text-gray-500 mr-5 mt-5'>
           <p>Tổng cộng {data.length} phòng trọ</p>
         </div>
         <PaginationNav 

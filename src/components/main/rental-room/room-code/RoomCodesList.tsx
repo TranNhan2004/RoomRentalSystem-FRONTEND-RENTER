@@ -113,7 +113,7 @@ export const RoomCodesList = (props: RoomCodesListProps) => {
                   )) 
               }
             </div>
-            <div className='flex justify-end text-sm italic text-gray-500 mr-2'>
+            <div className='flex justify-end text-sm italic text-gray-500 mr-5 mt-5'>
               <p>Tổng cộng {data.length} mã phòng</p>
             </div>
             <PaginationNav
