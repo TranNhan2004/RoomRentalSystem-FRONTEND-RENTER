@@ -20,9 +20,13 @@ import { RentalRoomCard } from './RentalRoomCard';
 import { GeneralMessage } from '@/messages/General.message';
 import { PaginationNav } from '@/components/partial/data/PaginationNav';
 import { Taskbar } from '@/components/partial/data/Taskbar';
-import { distanceService } from '@/services/Distance.service';
 import { getMyInfo } from '@/lib/client/authToken';
 import { setSearchToLocalStorage } from '@/services/SearchRoomHistory.service';
+import { 
+  getRecommendationFromLocalStorage, 
+  setRecommendationToLocalStorage,
+  recommendationService
+} from '@/services/Recommendation.service';
 
 
 export const RentalRoomsList = () => {
@@ -45,19 +49,6 @@ export const RentalRoomsList = () => {
   
   const cardsPerPage = 20;
 
-  const fetchRelatedData = useCallback(async (data: RentalRoomType[]) => {
-    const distanceDataArray = await Promise.all(data.map(
-      item => distanceService.getMany({ rental_room: item.id, renter: myIdRef.current })
-    ));
-
-    const distanceData = distanceDataArray.flat();
-
-    return data.map((item, index) => ({
-      ...item,
-      _distance_value: distanceData[index]?.value ?? -1, 
-    }));
-  }, []);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -65,13 +56,13 @@ export const RentalRoomsList = () => {
         myIdRef.current = (await getMyInfo()).id;
 
         const [data, provinceData, districtData, communeData] = await Promise.all([
-          rentalRoomService.getMany({ manager_is_null: false }),
+          rentalRoomService.getMany({ manager_is_null: false, _renter: myIdRef.current }),
           provinceService.getMany(),
           districtService.getMany(),
           communeService.getMany(),
         ]);
 
-        originalDataRef.current = await fetchRelatedData(data);
+        originalDataRef.current = [...data];
         
         setData([...originalDataRef.current]);
         setProvinceOptions(mapOptions(provinceData, ['name'], 'id'));
@@ -90,7 +81,7 @@ export const RentalRoomsList = () => {
     };
 
     fetchData();
-  }, [fetchRelatedData]);
+  }, []);
 
   useEffect(() => {
     setDisplayedData([...data.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage)]);
@@ -102,11 +93,19 @@ export const RentalRoomsList = () => {
         setLoading(true);
         if (viewMode === 'all') {
           const data = await rentalRoomService.getMany({ manager_is_null: false });
-          originalDataRef.current = await fetchRelatedData(data);
+          originalDataRef.current = [...data];
           setData([...originalDataRef.current]);
           
         } else if (viewMode === 'recommend') {
+          let recommendationList = await getRecommendationFromLocalStorage();
+          if (recommendationList.length === 0) {
+            recommendationList = await recommendationService.getMany({ renter: myIdRef.current });
+            await setRecommendationToLocalStorage(recommendationList);
+          }
 
+          const data = await rentalRoomService.listByIds({ _recommendation_list: recommendationList });
+          originalDataRef.current = [...data];
+          setData([...originalDataRef.current]);
         
         } else {
           await toastError(GeneralMessage.UNKNOWN_ERROR);
@@ -120,16 +119,16 @@ export const RentalRoomsList = () => {
     };
 
     fetchData();
-  }, [viewMode, fetchRelatedData]);
+  }, [viewMode]);
 
   const onPageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
   };
 
-  const detailsFunction = async (id: string) => {
+  const detailsFunction = useCallback(async (id: string) => {
     router.push(`rental-rooms/${id}`);
     await setSearchToLocalStorage(id, myIdRef.current ?? '');
-  };
+  }, [router]);
 
   const filterOnClick = async () => {
     try {
@@ -147,7 +146,7 @@ export const RentalRoomsList = () => {
         ));
 
         const data = dataArray.flat();
-        originalDataRef.current = await fetchRelatedData(data);
+        originalDataRef.current = [...data];
         setData([...originalDataRef.current]);
 
       } else if (query._district !== '' && query.commune === '') {
@@ -156,12 +155,12 @@ export const RentalRoomsList = () => {
           commune => rentalRoomService.getMany({ ...query, commune: commune.id, manager_is_null: false })
         ));
         const data = dataArray.flat();
-        originalDataRef.current = await fetchRelatedData(data);
+        originalDataRef.current = [...data];
         setData([...originalDataRef.current]);
 
       } else {
         const data = await rentalRoomService.getMany({ ...query, manager_is_null: false });
-        originalDataRef.current = await fetchRelatedData(data);
+        originalDataRef.current = [...data];
         setData([...originalDataRef.current]);
       }
       
@@ -212,6 +211,7 @@ export const RentalRoomsList = () => {
   const handleViewModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setViewMode(e.target.value);
   };
+
 
   if (loading) {
     return <Loading />;
@@ -346,14 +346,14 @@ export const RentalRoomsList = () => {
           <div className='grid grid-cols-4 gap-4'>
             {
               displayedData.length === 0 
-                ? 'Không có dữ liệu' 
-                : displayedData.map((item) => (
-                  <RentalRoomCard
-                    key={item.id}
-                    item={item}
-                    detailsFunction={detailsFunction}
-                  />
-                )) 
+              ? 'Không có dữ liệu' 
+              : displayedData.map((item) => (
+                <RentalRoomCard
+                  key={item.id}
+                  item={item}
+                  detailsFunction={detailsFunction}
+                />
+              ))
             }
           </div>
         </div>

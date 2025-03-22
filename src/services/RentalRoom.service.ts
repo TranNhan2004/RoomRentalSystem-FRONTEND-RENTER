@@ -14,6 +14,7 @@ import {
 } from "@/types/RentalRoom.type";
 import { ApiService } from "./Api.service";
 import { formatDate } from "@/lib/client/format";
+import { axiosInstance } from "@/lib/client/axios";
 
 const smoothData = async (data: ChargesType) => {
   const dataToSend: Record<string, unknown> = { ...data };
@@ -33,6 +34,11 @@ ApiService<
 > {
   constructor() {
     super('/app.rental-room/rental-rooms');
+  }
+
+  public async listByIds(data: RentalRoomType): Promise<RentalRoomType[]> {
+    const response = await axiosInstance.post('/app.rental-room/rental-rooms/list_by_ids/', data);
+    return response.data;
   }
 };
 

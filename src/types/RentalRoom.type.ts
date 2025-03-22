@@ -1,4 +1,5 @@
 import { DistrictType, ProvinceType } from "./Address.type";
+import { RecommendationType } from "./Recommendation.type";
 
 export type RentalRoomType = {
   id?: string;
@@ -10,6 +11,8 @@ export type RentalRoomType = {
   _room_charge?: ChargesType['room_charge'];
   _image?: RoomImageType['image'];
   _distance_value?: number;
+  _save_for_later?: string;
+  _recommendation_list?: RecommendationType[];
   further_description?: string;
   average_rating?: number;
   lessor?: string;
@@ -26,6 +29,7 @@ export type RentalRoomQueryType = {
   _empty_mode?: string;
   _province?: ProvinceType['id'];
   _district?: DistrictType['id'];
+  _renter?: string;
 };
 
 export type ChargesType = {

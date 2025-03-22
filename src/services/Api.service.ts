@@ -45,7 +45,6 @@ export class ApiService<T extends object, Q extends object> {
         fullParams += `${key}=${params[key]}&`;
       }
     }
-
     return `${this.endpoint}/${fullParams !== '?' ? fullParams.slice(0, -1) : ''}`;
   }
 

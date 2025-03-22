@@ -8,22 +8,41 @@ class RecommendationService extends ApiService<RecommendationType, Recommendatio
   }
 };
 
-export const searchRoomHistoryService = new RecommendationService();
+export const recommendationService = new RecommendationService();
 
+type StoredRecommendationData = {
+  data: RecommendationType[];
+  expires: string; 
+}
 
-export const setRecommendationToLocalStorage = async (data: RecommendationType[]) => {
-  localStorage.setItem('rec', await encryptValue(JSON.stringify(data)));
+export const setRecommendationToLocalStorage = async (data: RecommendationType[]): Promise<void> => {
+  const expires = new Date();
+  expires.setDate(expires.getDate() + 1); 
+
+  const storedData: StoredRecommendationData = {
+    data: data,
+    expires: expires.toISOString(), 
+  };
+
+  const encryptedValue = await encryptValue(JSON.stringify(storedData));
+  localStorage.setItem('rec', encryptedValue);
 };
 
 export const getRecommendationFromLocalStorage = async (): Promise<RecommendationType[]> => {
-  const recommendationData = localStorage.getItem('rec');
-  if (recommendationData) {
-    return JSON.parse(await decryptValue(recommendationData));
-  } 
+  const fullData = localStorage.getItem('rec');
+  
+  if (!fullData) {
+    return [];
+  }
 
-  return [];
-}; 
+  const decryptedValue = await decryptValue(fullData);
+  const parsedFullData: StoredRecommendationData = JSON.parse(decryptedValue);
 
-export const removeRecommendationFromLocalStorage = async () => {
-  localStorage.removeItem('rec');
+  const expiresDate = new Date(parsedFullData.expires);
+  if (expiresDate <= new Date()) {
+    localStorage.removeItem('rec');
+    return [];
+  }
+
+  return parsedFullData.data;
 };

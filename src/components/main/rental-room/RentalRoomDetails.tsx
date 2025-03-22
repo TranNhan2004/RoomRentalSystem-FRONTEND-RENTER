@@ -27,9 +27,9 @@ import { saveForLaterService } from '@/services/SaveForLater.service';
 import { handleCancelAlert, toastError, toastSuccess } from '@/lib/client/alert';
 import { SaveForLaterMessage } from '@/messages/SaveForLater.message';
 import { AxiosError } from 'axios';
-import { DistanceType } from '@/types/Distance.type';
-import { INITIAL_DISTANCE } from '@/initials/Distance.initial';
-import { distanceService } from '@/services/Distance.service';
+import { userService } from '@/services/UserAccount.service';
+import { UserType } from '@/types/UserAccount.type';
+import { INITIAL_USER } from '@/initials/UserAccount.initial';
 
 type RentalRoomDetailsProps = {
   id: string;
@@ -38,13 +38,12 @@ type RentalRoomDetailsProps = {
 export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
   const router = useRouter();
   const [data, setData] = useState<RentalRoomType>(INITIAL_RENTAL_ROOM);
-  const [distanceData, setDistanceData] = useState<DistanceType>(INITIAL_DISTANCE);
   const [chargesData, setChargesData] = useState<ChargesType>(INITIAL_CHARGES);
   const [provinceData, setProvinceData] = useState<ProvinceType>(INITIAL_PROVINCE);
   const [districtData, setDistrictData] = useState<DistrictType>(INITIAL_DISTRICT);
   const [communeData, setCommuneData] = useState<CommuneType>(INITIAL_COMMUNE);
+  const [lessorData, setLessorData] = useState<UserType>(INITIAL_USER);
   const [saveForLaterData, setSaveForLaterData] = useState<SaveForLaterType>(INITIAL_SAVE_FOR_LATER);
-  const [hasSaveForLaterData, setHasSaveForLaterData] = useState(false);
   const [isSaveForLaterMenuOpen, setIsSaveForLaterMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const myIdRef = useRef<string | undefined>(undefined);
@@ -56,33 +55,26 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
         myIdRef.current = (await getMyInfo()).id;
 
         const data = await rentalRoomService.get(props.id);
+
         const communeData = await communeService.get(data.commune ?? '');
         const districtData = await districtService.get(communeData.district ?? '');
         const provinceData = await provinceService.get(districtData.province?? '');
         
-        const [chargesData, saveForLaterData, distanceData] = await Promise.all([
+        const [lessorData, chargesData] = await Promise.all([
+          userService.get(data.lessor ?? ''),
           chargesService.getMany({ rental_room: props.id, first_only: true }),
-          saveForLaterService.getMany({ rental_room: props.id, renter: myIdRef.current }),
-          distanceService.getMany({ rental_room: props.id, renter: myIdRef.current })
         ]);
 
         setData(data);
         setCommuneData(communeData);
         setDistrictData(districtData);
         setProvinceData(provinceData);
+        setLessorData(lessorData);
         
         if (chargesData.length > 0) {
           setChargesData(chargesData[0]);
         }
-        
-        if (saveForLaterData.length > 0) {
-          setHasSaveForLaterData(true);
-        }
-
-        if (distanceData.length > 0) {
-          setDistanceData(distanceData[0]);
-        }
-        
+                
       } catch {
         router.push(NOT_FOUND_URL);
 
@@ -102,13 +94,13 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
 
   const handlePostError = async (error: unknown) => {
     if (!(error instanceof AxiosError)) {
-      setHasSaveForLaterData(false);
+      setData({ ...data, _save_for_later: undefined });
     
     } else if (
       error.response?.status === 400 &&
       error.response.data.non_field_errors[0] === SaveForLaterMessage.BACKEND_UNIQUE_FIELDS_ERROR
     ) {
-      setHasSaveForLaterData(true);
+      setData({ ...data, _save_for_later: props.id });
     }
     
     await toastError(SaveForLaterMessage.POST_ERROR);
@@ -122,7 +114,7 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
         renter: myIdRef.current,
       });
 
-      setHasSaveForLaterData(true);
+      setData({ ...data, _save_for_later: props.id });
       await toastSuccess(SaveForLaterMessage.POST_SUCCESS);
 
     } catch (error) {
@@ -158,8 +150,9 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
           <div className='w-1/2'>
             <div className='p-4 mt-5'>
               <h2 className='text-2xl font-bold'>Chi tiết phòng trọ</h2>
-              <div className='mt-4 ml-2 space-y-4'>
+              <div className='mt-4 ml-2 space-y-4 text-justify'>
                 <DataLine label='Tên' value={data.name} />
+                <DataLine label='Số điện thoại liên hệ' value={lessorData.phone_number} />
                 <DataLine label='Thuộc tỉnh/thành phố' value={provinceData.name} />
                 <DataLine label='Thuộc huyện/quận/thị xã' value={districtData.name} />
                 <DataLine label='Thuộc xã/phường/thị trấn' value={communeData.name} />
@@ -174,7 +167,7 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
                 <DataLine label='Mô tả' value={data.further_description || 'Không có mô tả'} />
                 <DataLine 
                   label='Khoảng cách' 
-                  value={`${round(distanceData.value, 1).toString().replace('.', ',')} km`} 
+                  value={`${round(data._distance_value, 1).toString().replace('.', ',')} km`} 
                 />
               </div>
             </div>
@@ -182,7 +175,7 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
               <ActionButton 
                 mode='save' 
                 onClick={saveForLaterOnClick}
-                disabled={hasSaveForLaterData}
+                disabled={data._save_for_later === props.id}
               >
                 Lưu vào mục Xem sau
               </ActionButton>
