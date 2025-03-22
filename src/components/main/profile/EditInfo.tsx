@@ -45,8 +45,6 @@ export const EditInfo = () => {
         ]);
   
         setProvinceOptions(mapOptions(provinceData, ['name'], 'id'));
-        setDistrictOptions(mapOptions(districtData, ['name'], 'id'));
-        setCommuneOptions(mapOptions(communeData, ['name'], 'id'));
         originalDistrictDataRef.current = districtData;
         originalCommuneDataRef.current = communeData;
   
@@ -54,7 +52,11 @@ export const EditInfo = () => {
 
         const commune = communeData.find(item => item.id === data.workplace_commune);
         const district = districtData.find(item => item.id === commune?.district);
-
+        const communes = communeData.filter(item => item.district === commune?.district);
+        const districts = districtData.filter(item => item.province === district?.province);
+        setCommuneOptions(mapOptions(communes, ['name'], 'id'));
+        setDistrictOptions(mapOptions(districts, ['name'], 'id'));
+        
         setReqData({ 
           ...data, 
           _workplace_district: district?.id,
