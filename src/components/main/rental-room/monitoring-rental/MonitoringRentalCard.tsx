@@ -57,15 +57,17 @@ export const MonitoringRentalCard = (props: MonitoringRentalCardProps) => {
 
       <div className='flex justify-end ml-auto mr-4 space-x-4 mb-3'>
         {
-          canShare ? (
-            <ActionButton mode='share' onClick={shareRoomCodeClick} >
-              Chia sẻ phòng
-            </ActionButton>
-          ) : props.item._room_code_obj?.current_occupancy && props.item._room_code_obj?.max_occupancy &&
-          props.item._room_code_obj.current_occupancy < props.item._room_code_obj.max_occupancy ? (
-            <ActionButton mode='stopShare' onClick={stopShareRoomCodeClick} >
-              Dừng chia sẻ
-            </ActionButton>
+          !props.item.end_date ? (
+            canShare ? (
+              <ActionButton mode='share' onClick={shareRoomCodeClick} >
+                Chia sẻ phòng
+              </ActionButton>
+            ) : props.item._room_code_obj?.current_occupancy && props.item._room_code_obj?.max_occupancy &&
+            props.item._room_code_obj.current_occupancy < props.item._room_code_obj.max_occupancy ? (
+              <ActionButton mode='stopShare' onClick={stopShareRoomCodeClick} >
+                Dừng chia sẻ
+              </ActionButton>
+            ) : null
           ) : null
         }
         <ActionButton mode='redirect' onClick={redirectToMonthlyRoomInvoicesListClick}>

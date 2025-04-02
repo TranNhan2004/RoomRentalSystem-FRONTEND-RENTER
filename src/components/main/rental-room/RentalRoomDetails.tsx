@@ -3,11 +3,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { RoomImagesList } from './image/RoomImagesList';
 import { DataLine } from '@/components/partial/data/DataLine';
-import { ChargesType, RentalRoomType } from '@/types/RentalRoom.type';
-import { INITIAL_CHARGES, INITIAL_RENTAL_ROOM } from '@/initials/RentalRoom.initial';
+import { RentalRoomType } from '@/types/RentalRoom.type';
+import { INITIAL_RENTAL_ROOM } from '@/initials/RentalRoom.initial';
 import { CommuneType, DistrictType, ProvinceType } from '@/types/Address.type';
 import { INITIAL_COMMUNE, INITIAL_DISTRICT, INITIAL_PROVINCE } from '@/initials/Address.initial';
-import { chargesService, rentalRoomService } from '@/services/RentalRoom.service';
+import { rentalRoomService } from '@/services/RentalRoom.service';
 import { communeService, districtService, provinceService } from '@/services/Address.service';
 import { useRouter } from 'next/navigation';
 import { NOT_FOUND_URL } from '@/lib/client/notFoundURL';
@@ -38,7 +38,6 @@ type RentalRoomDetailsProps = {
 export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
   const router = useRouter();
   const [data, setData] = useState<RentalRoomType>(INITIAL_RENTAL_ROOM);
-  const [chargesData, setChargesData] = useState<ChargesType>(INITIAL_CHARGES);
   const [provinceData, setProvinceData] = useState<ProvinceType>(INITIAL_PROVINCE);
   const [districtData, setDistrictData] = useState<DistrictType>(INITIAL_DISTRICT);
   const [communeData, setCommuneData] = useState<CommuneType>(INITIAL_COMMUNE);
@@ -46,37 +45,35 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
   const [saveForLaterData, setSaveForLaterData] = useState<SaveForLaterType>(INITIAL_SAVE_FOR_LATER);
   const [isSaveForLaterMenuOpen, setIsSaveForLaterMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const hasFetchedRef = useRef(false);
   const myIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     const fetchData = async () => {
+      if (hasFetchedRef.current) return;
+      hasFetchedRef.current = true;
+
       try {
         setLoading(true);
         myIdRef.current = (await getMyInfo()).id;
 
-        const data = await rentalRoomService.get(props.id);
+        const data = await rentalRoomService.get(props.id, { _renter: myIdRef.current });
 
         const communeData = await communeService.get(data.commune ?? '');
         const districtData = await districtService.get(communeData.district ?? '');
         const provinceData = await provinceService.get(districtData.province?? '');
         
-        const [lessorData, chargesData] = await Promise.all([
-          userService.get(data.lessor ?? ''),
-          chargesService.getMany({ rental_room: props.id, first_only: true }),
-        ]);
+        const lessorData = await userService.get(data.lessor ?? '');
 
         setData(data);
         setCommuneData(communeData);
         setDistrictData(districtData);
         setProvinceData(provinceData);
         setLessorData(lessorData);
-        
-        if (chargesData.length > 0) {
-          setChargesData(chargesData[0]);
-        }
                 
       } catch {
         router.push(NOT_FOUND_URL);
+        hasFetchedRef.current = false;
 
       } finally {
         setLoading(false);
@@ -160,7 +157,7 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
                 <DataLine label='Giờ đóng cửa' value={data.closing_time || 'Chưa xác định'} />
                 <DataLine label='Tổng số phòng' value={data.total_number} />
                 <div className='flex items-center'>
-                  <DataLine label='Đánh giá trung bình' value={''} />   
+                  <DataLine label='Đánh giá' value={''} />   
                   <RatingStar value={data.average_rating ?? 0} />
                   <span className='ml-2 text-gray-800'>{round(data.average_rating, 1)}/5</span>
                 </div>
@@ -192,27 +189,29 @@ export const RentalRoomDetails = (props: RentalRoomDetailsProps) => {
                 data={[
                   {
                     label: 'Giá phòng',
-                    value: formatCurrency(chargesData.room_charge)
+                    value: formatCurrency(data._charges?.room_charge)
                   },
                   {
                     label: 'Giá đặt cọc',
-                    value: formatCurrency(chargesData.deposit)
+                    value: formatCurrency(data._charges?.deposit)
                   },
                   {
                     label: 'Giá điện',
-                    value: formatCurrency(chargesData.electricity_charge)
+                    value: formatCurrency(data._charges?.electricity_charge)
                   },
                   {
                     label: 'Giá nước',
-                    value: formatCurrency(chargesData.water_charge)
+                    value: formatCurrency(data._charges?.water_charge)
                   },
                   {
                     label: 'Giá wifi',
-                    value: chargesData.wifi_charge === -1 ? 'Không cung cấp wifi' : formatCurrency(chargesData.wifi_charge)
+                    value: data._charges?.wifi_charge === -1 ? 
+                            'Không cung cấp wifi' : 
+                            formatCurrency(data._charges?.wifi_charge)
                   },
                   {
                     label: 'Giá thu dọn rác',
-                    value: formatCurrency(chargesData.rubbish_charge)
+                    value: formatCurrency(data._charges?.rubbish_charge)
                   }
                 ]}
               />

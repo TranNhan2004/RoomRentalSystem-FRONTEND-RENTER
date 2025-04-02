@@ -45,7 +45,7 @@ export class ApiService<T extends object, Q extends object> {
         fullParams += `${key}=${params[key]}&`;
       }
     }
-    return `${this.endpoint}/${fullParams !== '?' ? fullParams.slice(0, -1) : ''}`;
+    return fullParams !== '?' ? fullParams.slice(0, -1) : '';
   }
 
   public async post(data: T, useFormData?: boolean) {
@@ -60,12 +60,12 @@ export class ApiService<T extends object, Q extends object> {
   }
 
   public async getMany(params: Q = {} as Q) {
-    const response = await axiosInstance.get<T[]>(await this.getFullURLWithParams(params));
+    const response = await axiosInstance.get<T[]>(`${this.endpoint}/${await this.getFullURLWithParams(params)}`);
     return response.data;
   }
 
-  public async get(id: string) {
-    const response = await axiosInstance.get<T>(`${this.endpoint}/${id}/`);
+  public async get(id: string, params: Q = {} as Q) {
+    const response = await axiosInstance.get<T>(`${this.endpoint}/${id}/${await this.getFullURLWithParams(params)}`);
     return response.data;
   }
 

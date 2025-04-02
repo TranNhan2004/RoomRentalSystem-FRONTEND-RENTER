@@ -9,6 +9,7 @@ export type RentalRoomType = {
   closing_time?: string;
   total_number?: number;
   _room_charge?: ChargesType['room_charge'];
+  _charges?: ChargesType;
   _image?: RoomImageType['image'];
   _distance_value?: number;
   _save_for_later?: string;

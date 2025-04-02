@@ -22,7 +22,7 @@ export const ActivateAccount = (props: ActivateAccountProps) => {
       } catch {
         await toastError(AuthMessage.ACTIVATE_ERROR);
       }
-    }
+    };
 
     activateAccount();
   }, [props]);
@@ -35,7 +35,7 @@ export const ActivateAccount = (props: ActivateAccountProps) => {
         <span className="dot animate-bounce2">.</span>
         <span className="dot animate-bounce3">.</span>
       </div>
-    )
+    );
   }
 
   return (

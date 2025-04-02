@@ -141,7 +141,7 @@ export const ReviewsList = (props: ReviewsListProps) => {
 
   const handlePostCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
-    if (newValue.length <= 2000) {
+    if (newValue.length <= 2048) {
       setReqData({ ...reqData, comment: newValue });
     }
   };
@@ -284,7 +284,7 @@ export const ReviewsList = (props: ReviewsListProps) => {
                 placeholder='Bình luận của bạn...'
               />
               <div className='absolute bottom-[-18px] right-2 text-xs text-gray-500'>
-                {reqData.comment?.trim().length} / 2000 ký tự
+                {reqData.comment?.trim().length} / 2048 ký tự
               </div>
             </div>
           </div>
