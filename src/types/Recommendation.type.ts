@@ -4,5 +4,4 @@ export type RecommendationType = {
 
 export type RecommendationQueryType = {
   renter?: string;
-}
-
+};

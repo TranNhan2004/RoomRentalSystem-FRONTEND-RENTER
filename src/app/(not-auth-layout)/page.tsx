@@ -36,7 +36,7 @@ export default function HomePage() {
             <h2 className="text-xl font-bold">Lịch sử cho thuê</h2>
           </div>
           <p className="text-justify">
-            Dễ dàng quản lý và theo dõi các bản ghi liên quan đến các hợp đồng cho thuê và lịch sử thanh toán cá nhân.
+            Dễ dàng theo dõi các bản ghi liên quan đến các theo dõi cho thuê và lịch sử thanh toán cá nhân.
           </p>
         </div>
 
