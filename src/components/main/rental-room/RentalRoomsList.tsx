@@ -115,7 +115,10 @@ export const RentalRoomsList = () => {
             recommendationList = await recommendationService.getMany({
               renter: myIdRef.current,
             });
-            await setRecommendationToLocalStorage(recommendationList);
+
+            if (recommendationList.length > 0) {
+              await setRecommendationToLocalStorage(recommendationList);
+            }
           }
 
           const data = await rentalRoomService.listByIds({
